@@ -1,0 +1,116 @@
+// ==========================================
+// SISTEMA LC - ESTILOS PARA PÁGINAS INTERNAS
+// Compilar a: css/styles-internal.css
+// ==========================================
+
+@import 'variables';
+@import 'mixins';
+
+// Base para páginas internas
+.page-internal {
+  background: #f5f5f5;
+  font-family: $fuente-principal;
+  min-height: 100vh;
+  @include flex-column;
+  
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .header {
+    background: white;
+    color: #333;
+    border-radius: $radio-lg;
+    box-shadow: $sombra-sm;
+    margin-bottom: $espaciado-lg;
+    padding: $espaciado-lg;
+    max-width: $breakpoint-xl;
+    margin-left: auto;
+    margin-right: auto;
+    width: calc(100% - #{$espaciado-lg * 2});
+    
+    h1 {
+      font-size: 28px;
+      margin: 0 0 $espaciado-sm 0;
+      color: #333;
+    }
+    
+    .subtitle {
+      margin-bottom: 0;
+      color: #666;
+      font-size: 16px;
+    }
+  }
+  
+  .nav {
+    display: flex;
+    gap: $espaciado-sm;
+    margin-top: $espaciado-md;
+    flex-wrap: wrap;
+    
+    a {
+      padding: 10px 20px;
+      text-decoration: none;
+      color: #333;
+      background: #e0e0e0;
+      border-radius: $radio-sm;
+      transition: $transicion-normal;
+      
+      &:hover {
+        background: $color-primario;
+        color: white;
+      }
+      
+      &.active {
+        background: $color-primario;
+        color: white;
+      }
+    }
+  }
+  
+  .main {
+    display: block;
+    padding: 0 $espaciado-lg $espaciado-lg;
+    flex: 1;
+    max-width: $breakpoint-xl;
+    margin: 0 auto;
+    width: 100%;
+  }
+  
+  .footer {
+    background: #333;
+    color: white;
+    text-align: center;
+    padding: $espaciado-lg;
+    font-size: 14px;
+    margin-top: auto;
+  }
+}
+
+// Importar componentes
+@import 'components/botones';
+@import 'components/tarjetas';
+@import 'components/tablas';
+@import 'components/estados';
+
+// Utilidades específicas
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid $color-primario;
+  border-radius: 50%;
+  @include animacion-spin;
+  margin-left: $espaciado-sm;
+}
+
+input[type="file"] {
+  padding: $espaciado-sm;
+  border: 2px dashed #ccc;
+  border-radius: $radio-sm;
+  width: 100%;
+  max-width: 400px;
+}
