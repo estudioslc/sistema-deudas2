@@ -210,25 +210,16 @@ function renderStatsDashboard({ total, porEstado }, containerId = 'statsContaine
 /**
  * Cargar y mostrar estadísticas
  */
-async function cargarEstadisticas(containerId = 'statsContainer') {
-  showLoading(containerId, 'Contando causas...');
-  
-  try {
-    const data = await contarPorEstado();
-    renderStatsDashboard(data, containerId);
-  } catch (err) {
-    const container = document.getElementById(containerId);
-    if (container) {
-      container.innerHTML = `
-        <div class="stats-dashboard">
-          <div class="stat-box total" style="background: #dc3545;">
-            <div class="stat-number">Error</div>
-            <div class="stat-label">No se pudieron cargar las estadísticas</div>
-          </div>
-        </div>
-      `;
+function cargarEstadisticas() {
+    const causas = JSON.parse(localStorage.getItem('causas')) || [];
+    
+    if (causas.length === 0) {
+        document.getElementById('total-causas').textContent = '0';
+        document.getElementById('total-monto').textContent = '$0';
+        return;
     }
-  }
+    
+    // El resto de tu código que ya tenías...
 }
 
 // ==========================================
