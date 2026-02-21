@@ -268,3 +268,26 @@ function debounce(func, wait) {
     timeout = setTimeout(later, wait);
   };
 }
+/**
+ * Limpiar TODAS las causas de Supabase
+ */
+async function limpiarTodasLasCausas() {
+  if (!confirm('¿ESTÁS SEGURO de eliminar TODAS las causas? Esta acción no se puede deshacer.')) return;
+  
+  try {
+    const { error } = await supabaseClient
+      .from('deudas')
+      .delete()
+      .neq('id', 0); // Elimina todos los registros
+    
+    if (error) throw error;
+    
+    showSuccess('Todas las causas han sido eliminadas');
+    causas = [];
+    mostrarCausas([]);
+    
+  } catch (err) {
+    console.error('Error al limpiar:', err);
+    showError('Error al eliminar las causas: ' + err.message);
+  }
+}
