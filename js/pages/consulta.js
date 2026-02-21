@@ -13,18 +13,29 @@ let causaEditando = null;
  * Cargar causas desde Supabase
  */
 async function cargarCausas(filtro = null) {
-  const container = document.getElementById('resultados');;
+  const container = document.getElementById('resultados');
   if (!container) return;
   
   showLoading('resultados', 'Cargando causas...');
   
   try {
+    // Verificar conexión primero
+    const { data: testData, error: testError } = await supabaseClient
+      .from('deudas')
+      .select('id')
+      .limit(1);
+    
+    if (testError) {
+      console.error('Error de conexión:', testError);
+      container.innerHTML = '<div class="error">Error de conexión con la base de datos</div>';
+      return;
+    }
+    
     let query = supabaseClient
       .from('deudas')
       .select('*')
       .order('fecha_carga', { ascending: false });
     
-    // Aplicar filtro si existe
     if (filtro && filtro !== 'todos') {
       query = query.eq('estado', filtro);
     }
@@ -34,11 +45,17 @@ async function cargarCausas(filtro = null) {
     if (error) throw error;
     
     causas = data || [];
+    
+    if (causas.length === 0) {
+      container.innerHTML = '<div class="info">No hay causas cargadas. <a href="carga.html">Cargar causas</a></div>';
+      return;
+    }
+    
     mostrarCausas(causas);
     
   } catch (err) {
     console.error('Error al cargar causas:', err);
-    container.innerHTML = '<div class="error">Error al cargar las causas</div>';
+    container.innerHTML = '<div class="error">Error al consultar las causas: ' + err.message + '</div>';
   }
 }
 
@@ -278,7 +295,7 @@ async function limpiarTodasLasCausas() {
     const { error } = await supabaseClient
       .from('deudas')
       .delete()
-      .neq('id', 0); // Elimina todos los registros
+      .neq('id', 0);
     
     if (error) throw error;
     
