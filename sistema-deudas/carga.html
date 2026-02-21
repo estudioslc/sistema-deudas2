@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema LC - Carga Masiva</title>
+  
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- SheetJS para Excel -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/styles-internal.css">
+</head>
+<body class="page-internal">
+  <header class="header">
+    <h1>⚖️ Estudio LC - Sistema de Gestión</h1>
+    <p class="subtitle">Carga masiva de causas desde Excel</p>
+    <nav class="nav">
+      <a href="index.html">🏠 Inicio</a>
+      <a href="carga.html" class="active">📤 Carga Masiva</a>
+      <a href="consulta.html">🔍 Consulta y Edición</a>
+      <a href="admin.html">⚙️ Administración</a>
+    </nav>
+  </header>
+
+  <main class="main">
+    <div id="mensaje"></div>
+    
+    <div class="card">
+      <h2>📁 Seleccionar Archivo Excel</h2>
+      <p class="subtitle">El archivo debe contener columnas: expediente, carátula, deudor, documento, monto, estado</p>
+      
+      <input type="file" id="archivoExcel" accept=".xlsx,.xls">
+      
+      <div style="margin-top: 15px;">
+        <button id="btnProcesar" onclick="procesarExcel()" disabled>📊 Procesar Excel</button>
+        <button id="btnCargar" onclick="cargarDatos()" disabled class="btn-exito">📤 Cargar a Base de Datos</button>
+      </div>
+    </div>
+    
+    <div id="infoColumnas"></div>
+    <div id="previewDatos"></div>
+    
+    <div class="card">
+      <h3>📋 Instrucciones</h3>
+      <ol style="margin-left: 20px; line-height: 1.8;">
+        <li>Prepara tu archivo Excel con los datos de las causas</li>
+        <li>La primera fila debe contener los nombres de las columnas</li>
+        <li>Selecciona el archivo y haz clic en "Procesar Excel"</li>
+        <li>Revisa la vista previa de los datos</li>
+        <li>Haz clic en "Cargar a Base de Datos" para guardar</li>
+      </ol>
+      
+      <div class="warning-box">
+        <strong>⚠️ Importante:</strong> Los estados válidos son:<br>
+        <strong>X</strong> = Extrajudicial | 
+        <strong>D</strong> = Con Demanda | 
+        <strong>S</strong> = Con Sentencia | 
+        <strong>E</strong> = Ejecución | 
+        <strong>C</strong> = Con Convenio | 
+        <strong>P</strong> = Pagadas | 
+        <strong>B</strong> = Baja
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    © 2025 Estudio LC - Sistema de Gestión de Deudas
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+  <script src="js/pages/carga.js"></script>
+</body>
+</html>
