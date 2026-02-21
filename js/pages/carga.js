@@ -155,7 +155,23 @@ function mostrarPreview(datos) {
  */
 async function cargarDatos() {
   if (datosExcel.length === 0) {
-    showError('No hay datos para cargar');
+    showError('No hay datos para cargar. Primero seleccioná un archivo Excel.');
+    return;
+  }
+  
+  // Verificar conexión con Supabase primero
+  try {
+    const { error: testError } = await supabaseClient
+      .from('deudas')
+      .select('id')
+      .limit(1);
+    
+    if (testError) {
+      showError('Error de conexión con la base de datos: ' + testError.message);
+      return;
+    }
+  } catch (err) {
+    showError('No se puede conectar con Supabase. Verificá tu conexión.');
     return;
   }
   
@@ -164,7 +180,7 @@ async function cargarDatos() {
   
   if (btnCargar) {
     btnCargar.disabled = true;
-    btnCargar.innerHTML = '<span class="loading"></span> Cargando...';
+    btnCargar.innerHTML = '⏳ Cargando...';
   }
   
   showInfo(`Procesando ${datosExcel.length} registros...`);
@@ -175,6 +191,12 @@ async function cargarDatos() {
   for (let i = 0; i < datosExcel.length; i++) {
     const row = datosExcel[i];
     const registro = construirRegistro(row, mapeo);
+    
+    // Verificar que el registro tenga datos mínimos
+    if (!registro.expediente && !registro.deudor) {
+      fallidos.push({ fila: i + 2, error: 'Fila vacía o sin datos mínimos' });
+      continue;
+    }
     
     try {
       const { error } = await supabaseClient
@@ -189,6 +211,19 @@ async function cargarDatos() {
     } catch (err) {
       fallidos.push({ fila: i + 2, error: err.message });
     }
+    
+    if ((i + 1) % 10 === 0) {
+      showInfo(`Procesados ${i + 1} de ${datosExcel.length}... (${exitosos.length} exitosos)`);
+    }
+  }
+  
+  mostrarResultadoCarga(exitosos.length, fallidos);
+  
+  if (btnCargar) {
+    btnCargar.disabled = false;
+    btnCargar.innerHTML = '📤 Cargar a Base de Datos';
+  }
+}
     
     // Actualizar progreso cada 10 registros
     if ((i + 1) % 10 === 0) {
