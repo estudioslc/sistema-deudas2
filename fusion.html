@@ -1,1 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fusión de Datos - Sistema de Deudas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .step-active { border-color: #3b82f6; background-color: #eff6ff; }
+        .step-completed { border-color: #10b981; background-color: #ecfdf5; }
+        .loading { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navbar -->
+    <nav class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">Sistema de Deudas - Fusión de Archivos</h1>
+            <div class="space-x-4">
+                <a href="index.html" class="hover:underline">Estadísticas</a>
+                <a href="consulta.html" class="hover:underline">Consulta</a>
+                <a href="carga.html" class="hover:underline">Carga</a>
+                <a href="fusion.html" class="font-bold underline">Fusión</a>
+                <a href="admin.html" class="hover:underline">Admin</a>
+            </div>
+        </div>
+    </nav>
 
+    <div class="container mx-auto p-6 max-w-6xl">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Fusión de Datos Municipales con Trámites</h2>
+            <p class="text-gray-600">
+                Este módulo permite actualizar el archivo municipal (base de datos Supabase) 
+                con los datos de tu archivo de trámites. Cruza por <strong>Jud ID</strong> y actualiza: 
+                Estados, Teléfonos, Emails, Observaciones y Expediente Judicial.
+            </p>
+        </div>
+
+        <!-- Pasos -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div id="step1" class="step-active border-2 rounded-lg p-4 text-center transition-all">
+                <div class="text-2xl mb-2">📁</div>
+                <div class="font-bold">Paso 1</div>
+                <div class="text-sm text-gray-600">Cargar archivo de trámites</div>
+            </div>
+            <div id="step2" class="border-2 border-gray-200 rounded-lg p-4 text-center transition-all">
+                <div class="text-2xl mb-2">👁️</div>
+                <div class="font-bold">Paso 2</div>
+                <div class="text-sm text-gray-600">Verificar datos</div>
+            </div>
+            <div id="step3" class="border-2 border-gray-200 rounded-lg p-4 text-center transition-all">
+                <div class="text-2xl mb-2">⚙️</div>
+                <div class="font-bold">Paso 3</div>
+                <div class="text-sm text-gray-600">Configurar fusión</div>
+            </div>
+            <div id="step4" class="border-2 border-gray-200 rounded-lg p-4 text-center transition-all">
+                <div class="text-2xl mb-2">✅</div>
+                <div class="font-bold">Paso 4</div>
+                <div class="text-sm text-gray-600">Ejecutar y guardar</div>
+            </div>
+        </div>
+
+        <!-- Paso 1: Carga -->
+        <div id="panel1" class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-bold mb-4 text-blue-600">1. Cargar archivo Excel de trámites</h3>
+            
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                <p class="text-sm text-yellow-800">
+                    <strong>Formato requerido:</strong> Archivo Excel (.xlsx) con estas columnas:
+                    <code class="bg-yellow-100 px-1 rounded">Jud</code>, 
+                    <code class="bg-yellow-100 px-1 rounded">Estadoletra</code> (o Estado), 
+                    <code class="bg-yellow-100 px-1 rounded">Teléfono</code>, 
+                    <code class="bg-yellow-100 px-1 rounded">E-mail</code>, 
+                    <code class="bg-yellow-100 px-1 rounded">Observaciones</code>, 
+                    <code class="bg-yellow-100 px-1 rounded">Expte. Judicial</code>,
+                    <code class="bg-yellow-100 px-1 rounded">CausaOdenAño</code> (opcional, para verificación)
+                </p>
+            </div>
+
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors" id="dropZone">
+                <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden">
+                <div class="cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                    <div class="text-4xl mb-2">📊</div>
+                    <p class="text-gray-600 mb-2">Haz clic para seleccionar o arrastra tu archivo aquí</p>
+                    <p class="text-sm text-gray-400">Solo archivos Excel (.xlsx)</p>
+                </div>
+            </div>
+
+            <div id="fileInfo" class="hidden mt-4 p-4 bg-green-50 rounded-lg">
+                <p class="text-green-800 font-semibold">✓ Archivo cargado: <span id="fileName"></span></p>
+                <p class="text-sm text-green-600"><span id="rowCount"></span> registros encontrados</p>
+            </div>
+        </div>
+
+        <!-- Paso 2: Verificación -->
+        <div id="panel2" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h3 class="text-lg font-bold mb-4 text-blue-600">2. Verificar columnas detectadas</h3>
+            
+            <div id="columnMapping" class="grid grid-cols-2 gap-4 mb-4">
+                <!-- Se llena dinámicamente -->
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                <h4 class="font-bold mb-2">Vista previa de datos (primeros 5 registros):</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm" id="previewTable">
+                        <thead class="bg-gray-200">
+                            <tr id="previewHeader"></tr>
+                        </thead>
+                        <tbody id="previewBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex justify-between">
+                <button onclick="resetAll()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                    ← Volver atrás
+                </button>
+                <button onclick="goToStep3()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Continuar →
+                </button>
+            </div>
+        </div>
+
+        <!-- Paso 3: Configuración -->
+        <div id="panel3" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h3 class="text-lg font-bold mb-4 text-blue-600">3. Configurar actualización</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-bold mb-3 text-gray-700">Campos a actualizar:</h4>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" id="updateEstado" checked class="mr-3 h-5 w-5 text-blue-600">
+                            <div>
+                                <span class="font-semibold">Estado</span>
+                                <span class="text-sm text-gray-500 block">X=Extra, D=Demanda, S=Sentencia, E=Ejecución, C=Convenio, P=Pagada, B=Baja</span>
+                            </div>
+                        </label>
+                        
+                        <label class="flex items-center p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" id="updateTelefono" checked class="mr-3 h-5 w-5 text-blue-600">
+                            <div>
+                                <span class="font-semibold">Teléfono</span>
+                                <span class="text-sm text-gray-500 block">Concatena múltiples números, elimina duplicados</span>
+                            </div>
+                        </label>
+                        
+                        <label class="flex items-center p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" id="updateEmail" checked class="mr-3 h-5 w-5 text-blue-600">
+                            <div>
+                                <span class="font-semibold">Email</span>
+                                <span class="text-sm text-gray-500 block">Igual que teléfono, concatena y limpia</span>
+                            </div>
+                        </label>
+                        
+                        <label class="flex items-center p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" id="updateObservaciones" checked class="mr-3 h-5 w-5 text-blue-600">
+                            <div>
+                                <span class="font-semibold">Observaciones</span>
+                                <span class="text-sm text-gray-500 block">Agrega al final con fecha de actualización</span>
+                            </div>
+                        </label>
+                        
+                        <label class="flex items-center p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" id="updateExpte" checked class="mr-3 h-5 w-5 text-blue-600">
+                            <div>
+                                <span class="font-semibold">Expediente Judicial</span>
+                                <span class="text-sm text-gray-500 block">Solo si está vacío o es diferente</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="font-bold mb-3 text-gray-700">Opciones avanzadas:</h4>
+                    <div class="space-y-3">
+                        <div class="p-3 bg-blue-50 rounded">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="soloVacios" class="mr-3 h-4 w-4">
+                                <span class="text-sm">No sobrescribir datos existentes (solo campos vacíos)</span>
+                            </label>
+                        </div>
+                        
+                        <div class="p-3 bg-yellow-50 rounded">
+                            <label class="block text-sm font-semibold mb-1">Modo de fusión de teléfonos/emails:</label>
+                            <select id="modoFusion" class="w-full p-2 border rounded text-sm">
+                                <option value="concatenar">Concatenar todo (recomendado)</option>
+                                <option value="reemplazar">Reemplazar completamente</option>
+                                <option value="solo_nuevos">Agregar solo si no existe</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-gray-100 rounded text-sm">
+                        <strong>Resumen de mapeo:</strong>
+                        <ul class="mt-1 space-y-1 text-gray-600">
+                            <li>• Jud (trámites) → jud_id (municipal)</li>
+                            <li>• CausaOdenAño → Verificación de expediente</li>
+                            <li>• Estadoletra → estado_fusion</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between mt-6">
+                <button onclick="goToStep2()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                    ← Volver atrás
+                </button>
+                <button onclick="goToStep4()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Continuar →
+                </button>
+            </div>
+        </div>
+
+        <!-- Paso 4: Ejecución -->
+        <div id="panel4" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h3 class="text-lg font-bold mb-4 text-blue-600">4. Ejecutar fusión</h3>
+            
+            <div id="resumenFusion" class="bg-blue-50 p-4 rounded-lg mb-4">
+                <!-- Se llena dinámicamente -->
+            </div>
+
+            <div class="flex gap-4 mb-4">
+                <button onclick="simularFusion()" class="flex-1 px-4 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-semibold">
+                    🔍 Simular fusión (sin guardar)
+                </button>
+                <button onclick="ejecutarFusion()" class="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
+                    ✅ Ejecutar y guardar en Supabase
+                </button>
+            </div>
+
+            <div id="progressArea" class="hidden">
+                <div class="mb-2 flex justify-between text-sm font-semibold">
+                    <span id="progressText">Procesando...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+                </div>
+                <div id="progressLog" class="mt-2 text-sm text-gray-600 h-32 overflow-y-auto bg-gray-50 p-2 rounded font-mono"></div>
+            </div>
+
+            <div id="resultadosArea" class="hidden mt-4">
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="bg-green-100 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-green-800" id="countExitosos">0</div>
+                        <div class="text-sm text-green-600">Actualizaciones exitosas</div>
+                    </div>
+                    <div class="bg-yellow-100 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-yellow-800" id="countNoEncontrados">0</div>
+                        <div class="text-sm text-yellow-600">No encontrados en municipal</div>
+                    </div>
+                    <div class="bg-red-100 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-red-800" id="countErrores">0</div>
+                        <div class="text-sm text-red-600">Errores</div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="descargarResultados()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        📥 Descargar reporte detallado
+                    </button>
+                    <button onclick="descargarNoEncontrados()" class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">
+                        ⚠️ Descargar no encontrados
+                    </button>
+                    <button onclick="resetAll()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                        🔄 Nueva fusión
+                    </button>
+                </div>
+
+                <div id="detallesResultado" class="mt-4 max-h-96 overflow-y-auto bg-gray-50 p-4 rounded text-sm font-mono"></div>
+            </div>
+
+            <div class="flex justify-start mt-4">
+                <button onclick="goToStep3()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                    ← Volver atrás
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/pages/fusion.js"></script>
+</body>
+</html>
