@@ -35,7 +35,7 @@ async function cargarCausas(filtro = null) {
     let query = supabaseClient
       .from('deudas')
       .select('*')
-      .order('fecha_carga', { ascending: false });
+      .order('created_at', { ascending: false });
     
     if (filtro && filtro !== 'todos') {
       query = query.eq('estado', filtro);
