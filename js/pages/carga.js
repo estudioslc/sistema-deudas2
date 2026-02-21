@@ -273,7 +273,7 @@ function construirRegistro(row, mapeo) {
   
   // Valores por defecto
   if (!registro.estado) registro.estado = 'X';
-  if (!registro.fecha_carga) registro.fecha_carga = new Date().toISOString();
+  if (!registro.created_at) registro.created_at = new Date().toISOString();
   
   return registro;
 }
