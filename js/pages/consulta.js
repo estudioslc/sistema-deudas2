@@ -15,6 +15,7 @@ let causaEditando = null;
 async function cargarCausas(filtro = null) {
   const container = document.getElementById('resultados');
   if (!container) return;
+    if (!supabaseClient) initSupabase();
   
   showLoading('resultados', 'Cargando causas...');
   
@@ -241,6 +242,7 @@ async function eliminarCausa(id) {
  * Filtrar por estado
  */
 function filtrarPorEstado(estado) {
+  if (!supabaseClient) initSupabase();
   cargarCausas(estado);
 }
 
