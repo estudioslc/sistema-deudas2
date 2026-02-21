@@ -210,16 +210,22 @@ function renderStatsDashboard({ total, porEstado }, containerId = 'statsContaine
 /**
  * Cargar y mostrar estadísticas
  */
-function cargarEstadisticas() {
-    const causas = JSON.parse(localStorage.getItem('causas')) || [];
-    
-    if (causas.length === 0) {
-        document.getElementById('total-causas').textContent = '0';
-        document.getElementById('total-monto').textContent = '$0';
-        return;
+/**
+ * Cargar y mostrar estadísticas
+ */
+async function cargarEstadisticas() {
+  showLoading('statsContainer', 'Contando causas...');
+  
+  try {
+    const stats = await contarPorEstado();
+    renderStatsDashboard(stats);
+  } catch (err) {
+    console.error('Error:', err);
+    const container = document.getElementById('statsContainer');
+    if (container) {
+      container.innerHTML = '<div class="error">Error al cargar estadísticas. Intenta recargar la página.</div>';
     }
-    
-    // El resto de tu código que ya tenías...
+  }
 }
 
 // ==========================================
@@ -228,4 +234,9 @@ function cargarEstadisticas() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initSupabase();
+  
+  // Si estamos en index.html, cargar estadísticas
+  if (document.getElementById('statsContainer')) {
+    cargarEstadisticas();
+  }
 });
