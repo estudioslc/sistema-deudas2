@@ -454,7 +454,7 @@ function calcularCambiosPropuestos(tramite, registro, config) {
     // Estado
     if (config.updateEstado && columnasDetectadas.estadoletra) {
         const nuevoEstado = limpiarValor(tramite[columnasDetectadas.estadoletra])?.toUpperCase();
-        const estadoActual = limpiarValor(registro.estado_fusion);
+        const estadoActual = limpiarValor(registro.estado_fusion) || limpiarValor(registro.estado);
         
         if (nuevoEstado && ['X','D','S','E','C','P','B'].includes(nuevoEstado)) {
             if (!config.soloVacios || !estadoActual) {
