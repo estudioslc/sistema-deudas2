@@ -1,36 +1,25 @@
 // ==========================================
-// SISTEMA DE FUSIÓN DE DATOS
+// SISTEMA DE FUSIÓN DE DATOS - CORREGIDO
 // ==========================================
 
-// Variables globales
 let datosTramites = [];
 let columnasDetectadas = {};
 let resultadosFusion = [];
 
-// Inicialización cuando el DOM está listo
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Fusion.js cargado');
-    
-    // Los event listeners se configuran después de que todo cargue
     setTimeout(configurarEventListeners, 100);
 });
 
 function configurarEventListeners() {
-    console.log('Configurando event listeners...');
-    
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
 
-    if (!dropZone) {
-        console.error('No se encontró dropZone');
-        return;
-    }
-    if (!fileInput) {
-        console.error('No se encontró fileInput');
+    if (!dropZone || !fileInput) {
+        console.error('No se encontraron elementos');
         return;
     }
 
-    // Prevenir comportamiento por defecto en drag & drop para toda la página
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         document.body.addEventListener(eventName, preventDefaults, false);
     });
@@ -40,154 +29,93 @@ function configurarEventListeners() {
         e.stopPropagation();
     }
 
-    // Eventos del drop zone
     dropZone.addEventListener('dragenter', function(e) {
         e.preventDefault();
-        e.stopPropagation();
         this.classList.add('border-blue-500', 'bg-blue-50');
     });
 
     dropZone.addEventListener('dragover', function(e) {
         e.preventDefault();
-        e.stopPropagation();
         this.classList.add('border-blue-500', 'bg-blue-50');
     });
 
     dropZone.addEventListener('dragleave', function(e) {
         e.preventDefault();
-        e.stopPropagation();
         this.classList.remove('border-blue-500', 'bg-blue-50');
     });
 
     dropZone.addEventListener('drop', function(e) {
         e.preventDefault();
-        e.stopPropagation();
-        console.log('Drop detectado');
         this.classList.remove('border-blue-500', 'bg-blue-50');
-        
         const files = e.dataTransfer.files;
-        console.log('Archivos:', files.length);
-        
-        if (files.length > 0) {
-            procesarArchivo(files[0]);
-        }
+        if (files.length > 0) procesarArchivo(files[0]);
     });
 
-    // Click en drop zone para abrir selector
     dropZone.addEventListener('click', function(e) {
-        // Solo si no se hizo click en el input mismo
-        if (e.target !== fileInput) {
-            console.log('Click en drop zone');
-            fileInput.click();
-        }
+        if (e.target !== fileInput) fileInput.click();
     });
 
-    // Cambio en el input file
     fileInput.addEventListener('change', function(e) {
-        console.log('Change en file input');
-        console.log('Archivos seleccionados:', e.target.files.length);
-        
-        if (e.target.files.length > 0) {
-            procesarArchivo(e.target.files[0]);
-        }
+        if (e.target.files.length > 0) procesarArchivo(e.target.files[0]);
     });
-
-    console.log('Event listeners configurados correctamente');
 }
 
 // ==========================================
-// PROCESAR ARCHIVO EXCEL
+// PROCESAR ARCHIVO
 // ==========================================
 
 function procesarArchivo(file) {
-    console.log('Procesando archivo:', file.name);
-
     if (!file.name.match(/\.(xlsx|xls)$/i)) {
-        alert('Por favor, selecciona un archivo Excel (.xlsx o .xls)');
+        alert('Selecciona un archivo Excel (.xlsx)');
         return;
     }
 
-    // Mostrar que está cargando
     const dropZone = document.getElementById('dropZone');
-    dropZone.innerHTML = '<div class="text-blue-600 font-bold">Procesando archivo...</div>';
+    dropZone.innerHTML = '<div class="text-blue-600 font-bold">Procesando...</div>';
 
     const reader = new FileReader();
-    
-    reader.onerror = function(e) {
-        console.error('Error en FileReader:', e);
-        alert('Error al leer el archivo');
-        location.reload();
-    };
     
     reader.onload = function(e) {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-            
-            console.log('Hojas:', workbook.SheetNames);
-            
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
 
-            console.log('Filas totales:', jsonData.length);
+            if (jsonData.length < 2) throw new Error('Archivo sin datos');
 
-            if (jsonData.length < 2) {
-                throw new Error('El archivo no tiene datos suficientes');
-            }
-
-            // Procesar encabezados y datos
             const headers = jsonData[0].map(h => String(h).trim());
             datosTramites = [];
 
             for (let i = 1; i < jsonData.length; i++) {
                 const row = jsonData[i];
-                
-                // Saltar filas vacías
-                if (!row || row.length === 0 || row.every(cell => !cell || String(cell).trim() === '')) {
-                    continue;
-                }
+                if (!row || row.every(cell => !cell || String(cell).trim() === '')) continue;
                 
                 const obj = {};
                 headers.forEach((header, index) => {
-                    const valor = row[index] !== undefined && row[index] !== null ? String(row[index]).trim() : '';
+                    const valor = row[index] !== undefined ? String(row[index]).trim() : '';
                     obj[header] = valor;
                 });
-                
                 datosTramites.push(obj);
             }
 
-            console.log('Registros procesados:', datosTramites.length);
-
-            if (datosTramites.length === 0) {
-                throw new Error('No se encontraron datos válidos');
-            }
-
-            // Detectar columnas
             detectarColumnas(headers);
-
-            // Mostrar info en pantalla
+            
             document.getElementById('fileName').textContent = file.name;
             document.getElementById('rowCount').textContent = datosTramites.length + ' registros';
             document.getElementById('fileInfo').classList.remove('hidden');
 
-            // Restaurar drop zone
             dropZone.innerHTML = `
                 <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden">
                 <div class="cursor-pointer">
                     <div class="text-4xl mb-2">📊</div>
-                    <p class="text-gray-600 mb-2">Haz clic para seleccionar o arrastra tu archivo aquí</p>
-                    <p class="text-sm text-gray-400">Solo archivos Excel (.xlsx)</p>
+                    <p class="text-gray-600">Haz clic o arrastra archivo aquí</p>
                 </div>
             `;
-            
-            // Reconfigurar event listeners porque recreamos el input
             setTimeout(configurarEventListeners, 100);
-            
-            // Ir al paso 2
             setTimeout(goToStep2, 500);
 
         } catch (error) {
-            console.error('Error:', error);
             alert('Error: ' + error.message);
             location.reload();
         }
@@ -215,7 +143,7 @@ function detectarColumnas(headers) {
         if (h.includes('telefono') || h.includes('tel')) columnasDetectadas.telefono = header;
         if (h.includes('mail') || h.includes('email')) columnasDetectadas.email = header;
         if (h.includes('observacion')) columnasDetectadas.observaciones = header;
-        if ((h.includes('expte') || h.includes('expediente')) && h.includes('judicial')) columnasDetectadas.expteJudicial = header;
+        if (h.includes('expte') && h.includes('judicial')) columnasDetectadas.expteJudicial = header;
         if (h === 'causaordenaño' || h === 'causaordenano') columnasDetectadas.causaOrdenAnio = header;
     });
 
@@ -223,18 +151,16 @@ function detectarColumnas(headers) {
 }
 
 // ==========================================
-// NAVEGACIÓN DE PASOS
+// NAVEGACIÓN
 // ==========================================
 
 function goToStep2() {
     if (datosTramites.length === 0) {
-        alert('Primero debes cargar un archivo');
+        alert('Primero carga un archivo');
         return;
     }
 
-    // Actualizar UI
     actualizarPasos(2);
-    
     document.getElementById('panel1').classList.add('hidden');
     document.getElementById('panel2').classList.remove('hidden');
     document.getElementById('panel3').classList.add('hidden');
@@ -246,19 +172,16 @@ function goToStep2() {
 
 function goToStep3() {
     if (!columnasDetectadas.jud) {
-        alert('No se detectó la columna Jud. Verificá el archivo.');
+        alert('No se detectó columna Jud');
         return;
     }
-
     actualizarPasos(3);
-    
     document.getElementById('panel2').classList.add('hidden');
     document.getElementById('panel3').classList.remove('hidden');
 }
 
 function goToStep4() {
     actualizarPasos(4);
-    
     document.getElementById('panel3').classList.add('hidden');
     document.getElementById('panel4').classList.remove('hidden');
 
@@ -268,13 +191,13 @@ function goToStep4() {
     if (config.updateTelefono) campos.push('Teléfono');
     if (config.updateEmail) campos.push('Email');
     if (config.updateObservaciones) campos.push('Observaciones');
-    if (config.updateExpte) campos.push('Expediente Judicial');
+    if (config.updateExpte) campos.push('Expediente');
 
     document.getElementById('resumenFusion').innerHTML = `
         <h4 class="font-bold mb-2">Resumen:</h4>
         <ul class="text-sm space-y-1">
-            <li>• Total registros: <strong>${datosTramites.length}</strong></li>
-            <li>• Campos a actualizar: <strong>${campos.join(', ') || 'Ninguno'}</strong></li>
+            <li>• Total: <strong>${datosTramites.length}</strong></li>
+            <li>• Campos: <strong>${campos.join(', ')}</strong></li>
             <li>• Modo: <strong>${config.modoFusion}</strong></li>
         </ul>
     `;
@@ -284,21 +207,16 @@ function actualizarPasos(pasoActivo) {
     for (let i = 1; i <= 4; i++) {
         const el = document.getElementById('step' + i);
         el.classList.remove('step-active', 'step-completed');
-        
-        if (i < pasoActivo) {
-            el.classList.add('step-completed');
-        } else if (i === pasoActivo) {
-            el.classList.add('step-active');
-        }
+        if (i < pasoActivo) el.classList.add('step-completed');
+        else if (i === pasoActivo) el.classList.add('step-active');
     }
 }
 
 function mostrarMapeoColumnas() {
     const container = document.getElementById('columnMapping');
-    
     const mapeos = [
         { campo: 'Jud', columna: columnasDetectadas.jud, req: true },
-        { campo: 'Estadoletra/Estado', columna: columnasDetectadas.estadoletra, req: true },
+        { campo: 'Estadoletra', columna: columnasDetectadas.estadoletra, req: true },
         { campo: 'Teléfono', columna: columnasDetectadas.telefono, req: false },
         { campo: 'E-mail', columna: columnasDetectadas.email, req: false },
         { campo: 'Observaciones', columna: columnasDetectadas.observaciones, req: false },
@@ -320,8 +238,7 @@ function mostrarPreview() {
     const thead = document.getElementById('previewHeader');
     const tbody = document.getElementById('previewBody');
 
-    thead.innerHTML = headers.map(h => `<th class="p-2 bg-gray-200 text-left">${h}</th>`).join('');
-    
+    thead.innerHTML = headers.map(h => `<th class="p-2 bg-gray-200 text-left text-sm">${h}</th>`).join('');
     tbody.innerHTML = datosTramites.slice(0, 5).map(row => `
         <tr class="border-b">
             ${headers.map(h => `<td class="p-2 border-r text-sm">${row[h] || '-'}</td>`).join('')}
@@ -342,7 +259,99 @@ function obtenerConfiguracion() {
 }
 
 // ==========================================
-// EJECUCIÓN DE FUSIÓN
+// FUNCIONES DE LIMPIEZA Y NORMALIZACIÓN
+// ==========================================
+
+function limpiarValor(valor) {
+    if (!valor || valor === '-' || valor.trim() === '-') return '';
+    return valor.trim();
+}
+
+function normalizarContacto(contacto) {
+    if (!contacto) return '';
+    return contacto.toLowerCase()
+        .replace(/eq/g, '')
+        .replace(/[\s\-\/\.]/g, '')
+        .replace(/[^a-z0-9@]/g, '');
+}
+
+function contactoExiste(lista, nuevo) {
+    const nuevoNormalizado = normalizarContacto(nuevo);
+    if (!nuevoNormalizado) return false;
+    return lista.some(existente => normalizarContacto(existente) === nuevoNormalizado);
+}
+
+function fusionarTexto(existente, nuevo, modo) {
+    const existenteLimpio = limpiarValor(existente);
+    const nuevoLimpio = limpiarValor(nuevo);
+    
+    if (!nuevoLimpio) return existenteLimpio;
+    if (!existenteLimpio) return nuevoLimpio;
+    if (modo === 'reemplazar') return nuevoLimpio;
+
+    const itemsExistentes = existenteLimpio.split('/').map(s => s.trim()).filter(s => s);
+    const itemsNuevos = nuevoLimpio.split('/').map(s => s.trim()).filter(s => s);
+
+    if (modo === 'solo_nuevos') {
+        const unicos = itemsNuevos.filter(n => !contactoExiste(itemsExistentes, n));
+        if (unicos.length === 0) return existenteLimpio;
+        return [...itemsExistentes, ...unicos].join(' / ');
+    }
+
+    const resultado = [...itemsExistentes];
+    itemsNuevos.forEach(nuevoItem => {
+        if (!contactoExiste(resultado, nuevoItem)) {
+            resultado.push(nuevoItem);
+        }
+    });
+    
+    return resultado.join(' / ');
+}
+
+// ==========================================
+// BÚSQUEDA POR JUD_ID CON TRIM (IGNORA ESPACIOS)
+// ==========================================
+
+async function buscarPorJudId(judId) {
+    const judLimpio = limpiarValor(judId);
+    if (!judLimpio) return { data: null, error: 'Jud vacío' };
+
+    // Estrategia 1: Buscar exacto
+    let { data, error } = await supabaseClient
+        .from('deudas')
+        .select('*')
+        .eq('jud_id', judLimpio);
+
+    if (error) return { data: null, error };
+
+    // Si no encuentra, probar con espacios comunes
+    if (!data || data.length === 0) {
+        const variaciones = [
+            ' ' + judLimpio,           // espacio al inicio
+            judLimpio + ' ',           // espacio al final
+            ' ' + judLimpio + ' ',     // espacios en ambos lados
+            judLimpio.replace(/\s/g, '') // sin espacios internos
+        ];
+
+        for (const variacion of variaciones) {
+            if (variacion === judLimpio) continue;
+            
+            const resultado = await supabaseClient
+                .from('deudas')
+                .select('*')
+                .eq('jud_id', variacion);
+            
+            if (resultado.data && resultado.data.length > 0) {
+                return { data: resultado.data, error: null, variacionUsada: variacion };
+            }
+        }
+    }
+
+    return { data, error };
+}
+
+// ==========================================
+// EJECUCIÓN
 // ==========================================
 
 async function simularFusion() {
@@ -355,32 +364,30 @@ async function simularFusion() {
     let encontrados = 0;
     let noEncontrados = 0;
 
-    // Simular solo los primeros 50 para no tardar mucho
     const limite = Math.min(datosTramites.length, 50);
 
     for (let i = 0; i < limite; i++) {
         const tramite = datosTramites[i];
-        const judId = tramite[columnasDetectadas.jud];
+        const judId = limpiarValor(tramite[columnasDetectadas.jud]);
 
         if (!judId) {
             noEncontrados++;
             continue;
         }
 
-        // Simular 90% de éxito
-        if (Math.random() > 0.1) {
+        const { data, error, variacionUsada } = await buscarPorJudId(judId);
+        
+        if (data && data.length > 0) {
             encontrados++;
-            resultadosFusion.push({
-                judId: judId,
-                encontrado: true,
-                simulado: true
+            resultadosFusion.push({ 
+                judId: judId, 
+                encontrado: true, 
+                simulado: true,
+                variacion: variacionUsada || 'exacto'
             });
         } else {
             noEncontrados++;
-            resultadosFusion.push({
-                judId: judId,
-                encontrado: false
-            });
+            resultadosFusion.push({ judId: judId, encontrado: false });
         }
 
         actualizarProgress(((i + 1) / limite) * 100);
@@ -393,7 +400,6 @@ async function simularFusion() {
 async function ejecutarFusion() {
     if (!confirm('¿Actualizar la base de datos?')) return;
 
-    // Verificar que supabaseClient existe (del main.js)
     if (typeof supabaseClient === 'undefined' || !supabaseClient) {
         alert('Error: No hay conexión con Supabase');
         return;
@@ -403,7 +409,7 @@ async function ejecutarFusion() {
     resultadosFusion = [];
     
     mostrarProgress(true);
-    logProgress('Iniciando fusión real...');
+    logProgress('Iniciando fusión...');
 
     let exitosos = 0;
     let noEncontrados = 0;
@@ -411,7 +417,7 @@ async function ejecutarFusion() {
 
     for (let i = 0; i < datosTramites.length; i++) {
         const tramite = datosTramites[i];
-        const judId = tramite[columnasDetectadas.jud];
+        const judId = limpiarValor(tramite[columnasDetectadas.jud]);
 
         if (!judId) {
             resultadosFusion.push({ judId: 'SIN_ID', error: 'Sin Jud' });
@@ -420,18 +426,16 @@ async function ejecutarFusion() {
         }
 
         try {
-            // Buscar en Supabase
-            const { data: municipales, error: searchError } = await supabaseClient
-                .from('deudas')
-                .select('*')
-                .eq('jud_id', judId);
+            logProgress(`Buscando Jud ${judId}...`);
+            
+            const { data: municipales, error, variacionUsada } = await buscarPorJudId(judId);
 
-            if (searchError) throw searchError;
+            if (error) throw new Error(error);
 
             if (!municipales || municipales.length === 0) {
                 resultadosFusion.push({ judId: judId, encontrado: false });
                 noEncontrados++;
-                logProgress(`No encontrado: ${judId}`);
+                logProgress(`⚠️ No encontrado: ${judId}`);
                 continue;
             }
 
@@ -455,15 +459,16 @@ async function ejecutarFusion() {
                 judId: judId, 
                 encontrado: true, 
                 actualizado: true,
-                expediente: registro.expediente
+                expediente: registro.expediente,
+                variacion: variacionUsada || 'exacto'
             });
             exitosos++;
-            logProgress(`✓ Actualizado: ${judId}`);
+            logProgress(`✅ Actualizado: ${judId}${variacionUsada ? ' (con espacio)' : ''}`);
 
         } catch (error) {
             resultadosFusion.push({ judId: judId, error: error.message });
             errores++;
-            logProgress(`✗ Error en ${judId}: ${error.message}`);
+            logProgress(`❌ Error en ${judId}: ${error.message}`);
         }
 
         actualizarProgress(((i + 1) / datosTramites.length) * 100);
@@ -476,21 +481,20 @@ function prepararUpdate(tramite, registro, config) {
     const updateData = {};
     const fecha = new Date().toISOString().split('T')[0];
 
-    // Estado
     if (config.updateEstado && columnasDetectadas.estadoletra) {
-        const estado = tramite[columnasDetectadas.estadoletra]?.toUpperCase().trim();
+        const estado = limpiarValor(tramite[columnasDetectadas.estadoletra])?.toUpperCase();
         if (estado && ['X','D','S','E','C','P','B'].includes(estado)) {
-            if (!config.soloVacios || !registro.estado_fusion) {
+            const actual = limpiarValor(registro.estado_fusion);
+            if (!config.soloVacios || !actual) {
                 updateData.estado_fusion = estado;
             }
         }
     }
 
-    // Teléfono
     if (config.updateTelefono && columnasDetectadas.telefono) {
-        const tel = tramite[columnasDetectadas.telefono];
+        const tel = limpiarValor(tramite[columnasDetectadas.telefono]);
         if (tel) {
-            const actual = registro.telefono_fusion || '';
+            const actual = limpiarValor(registro.telefono_fusion);
             const nuevo = fusionarTexto(actual, tel, config.modoFusion);
             if (nuevo && (!config.soloVacios || !actual)) {
                 updateData.telefono_fusion = nuevo;
@@ -498,11 +502,10 @@ function prepararUpdate(tramite, registro, config) {
         }
     }
 
-    // Email
     if (config.updateEmail && columnasDetectadas.email) {
-        const email = tramite[columnasDetectadas.email];
+        const email = limpiarValor(tramite[columnasDetectadas.email]);
         if (email) {
-            const actual = registro.email_fusion || '';
+            const actual = limpiarValor(registro.email_fusion);
             const nuevo = fusionarTexto(actual, email, config.modoFusion);
             if (nuevo && (!config.soloVacios || !actual)) {
                 updateData.email_fusion = nuevo;
@@ -510,11 +513,10 @@ function prepararUpdate(tramite, registro, config) {
         }
     }
 
-    // Observaciones
     if (config.updateObservaciones && columnasDetectadas.observaciones) {
-        const obs = tramite[columnasDetectadas.observaciones];
+        const obs = limpiarValor(tramite[columnasDetectadas.observaciones]);
         if (obs) {
-            const actual = registro.observaciones_fusion || '';
+            const actual = limpiarValor(registro.observaciones_fusion);
             const nueva = actual ? `${actual} | [${fecha}] ${obs}` : `[${fecha}] ${obs}`;
             if (!config.soloVacios || !actual) {
                 updateData.observaciones_fusion = nueva;
@@ -522,11 +524,13 @@ function prepararUpdate(tramite, registro, config) {
         }
     }
 
-    // Expediente Judicial
     if (config.updateExpte && columnasDetectadas.expteJudicial) {
-        const expte = tramite[columnasDetectadas.expteJudicial];
-        if (expte && (!config.soloVacios || !registro.expte_judicial)) {
-            updateData.expte_judicial = expte;
+        const expte = limpiarValor(tramite[columnasDetectadas.expteJudicial]);
+        if (expte) {
+            const actual = limpiarValor(registro.expte_judicial);
+            if (!config.soloVacios || !actual) {
+                updateData.expte_judicial = expte;
+            }
         }
     }
 
@@ -537,38 +541,13 @@ function prepararUpdate(tramite, registro, config) {
     return updateData;
 }
 
-function fusionarTexto(existente, nuevo, modo) {
-    if (!nuevo) return existente;
-    if (!existente) return nuevo;
-
-    if (modo === 'reemplazar') return nuevo;
-
-    const itemsExistentes = existente.split('/').map(s => s.trim()).filter(s => s);
-    const itemsNuevos = nuevo.split('/').map(s => s.trim()).filter(s => s);
-
-    if (modo === 'solo_nuevos') {
-        const unicos = itemsNuevos.filter(n => !itemsExistentes.includes(n));
-        if (unicos.length === 0) return existente;
-        return [...itemsExistentes, ...unicos].join(' / ');
-    }
-
-    // concatenar
-    const todos = [...itemsExistentes];
-    itemsNuevos.forEach(n => {
-        if (!todos.includes(n)) todos.push(n);
-    });
-    return todos.join(' / ');
-}
-
 // ==========================================
-// UI UTILIDADES
+// UI
 // ==========================================
 
 function mostrarProgress(mostrar) {
     document.getElementById('progressArea').classList.toggle('hidden', !mostrar);
-    if (mostrar) {
-        document.getElementById('resultadosArea').classList.add('hidden');
-    }
+    if (mostrar) document.getElementById('resultadosArea').classList.add('hidden');
 }
 
 function actualizarProgress(porcentaje) {
@@ -596,20 +575,20 @@ function mostrarResultados(exitosos, noEncontrados, errores) {
         if (r.error) return `<div class="text-red-600">❌ ${r.judId}: ${r.error}</div>`;
         if (!r.encontrado) return `<div class="text-yellow-600">⚠️ ${r.judId}: No encontrado</div>`;
         if (!r.actualizado) return `<div class="text-blue-600">ℹ️ ${r.judId}: Sin cambios</div>`;
-        return `<div class="text-green-600">✅ ${r.judId} (${r.expediente || 'N/A'})</div>`;
+        const variacion = r.variacion && r.variacion !== 'exacto' ? ` <span class="text-xs text-gray-500">(${r.variacion})</span>` : '';
+        return `<div class="text-green-600">✅ ${r.judId} (${r.expediente || 'N/A'})${variacion}</div>`;
     }).join('');
 }
 
 function descargarResultados() {
     if (resultadosFusion.length === 0) return;
-    
     const data = resultadosFusion.map(r => ({
         'Jud ID': r.judId,
         'Encontrado': r.encontrado ? 'Sí' : 'No',
         'Actualizado': r.actualizado ? 'Sí' : 'No',
+        'Variación': r.variacion || '',
         'Error': r.error || ''
     }));
-
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Resultados');
@@ -619,7 +598,6 @@ function descargarResultados() {
 function descargarNoEncontrados() {
     const noEncontrados = resultadosFusion.filter(r => !r.encontrado);
     if (noEncontrados.length === 0) return;
-
     const data = noEncontrados.map(r => ({ Jud: r.judId }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -628,9 +606,7 @@ function descargarNoEncontrados() {
 }
 
 function resetAll() {
-    if (confirm('¿Volver al inicio?')) {
-        location.reload();
-    }
+    if (confirm('¿Volver al inicio?')) location.reload();
 }
 
 // Exponer funciones globales
