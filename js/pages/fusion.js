@@ -1,58 +1,36 @@
 // ==========================================
-// SISTEMA DE FUSIÓN DE DATOS - CORREGIDO
+// SISTEMA DE FUSIÓN DE DATOS
 // ==========================================
 
 // Variables globales
 let datosTramites = [];
 let columnasDetectadas = {};
 let resultadosFusion = [];
-let supabaseClient = null;
-let fileInputHandler = null;
 
-// Inicialización
+// Inicialización cuando el DOM está listo
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Fusion.js cargado correctamente');
+    console.log('Fusion.js cargado');
     
-    // Inicializar Supabase si existe
-    inicializarSupabase();
-    
-    // Configurar event listeners
-    configurarEventListeners();
+    // Los event listeners se configuran después de que todo cargue
+    setTimeout(configurarEventListeners, 100);
 });
 
-function inicializarSupabase() {
-    try {
-        // Intentar obtener el cliente de Supabase de diferentes maneras
-        if (window.supabaseClient) {
-            supabaseClient = window.supabaseClient;
-            console.log('Supabase client encontrado en window.supabaseClient');
-        } else if (window.supabase && window.supabase.createClient) {
-            // Crear nuevo cliente - NECESITO QUE ME PASES TUS CREDENCIALES REALES
-            supabaseClient = window.supabase.createClient(
-                'https://jigyfagcxaifgdogaduf.supabase.co',
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZ3lmYWdjeGFpZmdkb2dhZHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNjgwMDAsImV4cCI6MjA1MzY0NDAwMH0.your_real_anon_key_here'
-            );
-            console.log('Supabase client creado');
-        } else {
-            console.warn('Supabase no disponible - la carga de archivos funcionará pero no se podrá guardar en BD');
-        }
-    } catch (error) {
-        console.error('Error inicializando Supabase:', error);
-    }
-}
-
 function configurarEventListeners() {
+    console.log('Configurando event listeners...');
+    
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
 
-    if (!dropZone || !fileInput) {
-        console.error('No se encontraron elementos dropZone o fileInput');
+    if (!dropZone) {
+        console.error('No se encontró dropZone');
+        return;
+    }
+    if (!fileInput) {
+        console.error('No se encontró fileInput');
         return;
     }
 
-    console.log('Configurando event listeners...');
-
-    // Prevenir comportamiento por defecto en toda la página para drag & drop
+    // Prevenir comportamiento por defecto en drag & drop para toda la página
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         document.body.addEventListener(eventName, preventDefaults, false);
     });
@@ -63,63 +41,54 @@ function configurarEventListeners() {
     }
 
     // Eventos del drop zone
-    dropZone.addEventListener('dragenter', (e) => {
+    dropZone.addEventListener('dragenter', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Drag enter');
-        dropZone.classList.add('border-blue-500', 'bg-blue-50');
+        this.classList.add('border-blue-500', 'bg-blue-50');
     });
 
-    dropZone.addEventListener('dragover', (e) => {
+    dropZone.addEventListener('dragover', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        dropZone.classList.add('border-blue-500', 'bg-blue-50');
+        this.classList.add('border-blue-500', 'bg-blue-50');
     });
 
-    dropZone.addEventListener('dragleave', (e) => {
+    dropZone.addEventListener('dragleave', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Drag leave');
-        // Solo remover si realmente salió del elemento (no de un hijo)
-        if (e.relatedTarget && !dropZone.contains(e.relatedTarget)) {
-            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-        }
+        this.classList.remove('border-blue-500', 'bg-blue-50');
     });
 
-    dropZone.addEventListener('drop', (e) => {
+    dropZone.addEventListener('drop', function(e) {
         e.preventDefault();
         e.stopPropagation();
         console.log('Drop detectado');
-        dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+        this.classList.remove('border-blue-500', 'bg-blue-50');
         
         const files = e.dataTransfer.files;
-        console.log('Archivos en drop:', files.length);
+        console.log('Archivos:', files.length);
         
         if (files.length > 0) {
             procesarArchivo(files[0]);
-        } else {
-            alert('No se detectaron archivos. Intentá de nuevo.');
         }
     });
 
-    // Evento del input file
-    fileInputHandler = function(e) {
-        console.log('Change event en fileInput');
+    // Click en drop zone para abrir selector
+    dropZone.addEventListener('click', function(e) {
+        // Solo si no se hizo click en el input mismo
+        if (e.target !== fileInput) {
+            console.log('Click en drop zone');
+            fileInput.click();
+        }
+    });
+
+    // Cambio en el input file
+    fileInput.addEventListener('change', function(e) {
+        console.log('Change en file input');
         console.log('Archivos seleccionados:', e.target.files.length);
         
         if (e.target.files.length > 0) {
             procesarArchivo(e.target.files[0]);
-        }
-    };
-    
-    fileInput.addEventListener('change', fileInputHandler);
-
-    // Click en el drop zone
-    dropZone.addEventListener('click', (e) => {
-        // Evitar que se dispare si se hizo click en el input mismo
-        if (e.target !== fileInput) {
-            console.log('Click en drop zone, abriendo selector');
-            fileInput.click();
         }
     });
 
@@ -127,132 +96,104 @@ function configurarEventListeners() {
 }
 
 // ==========================================
-// PASO 1: PROCESAR ARCHIVO
+// PROCESAR ARCHIVO EXCEL
 // ==========================================
 
 function procesarArchivo(file) {
-    console.log('Procesando archivo:', file.name, 'Tipo:', file.type, 'Tamaño:', file.size);
+    console.log('Procesando archivo:', file.name);
 
     if (!file.name.match(/\.(xlsx|xls)$/i)) {
-        alert('Por favor, selecciona un archivo Excel (.xlsx o .xls)\nArchivo recibido: ' + file.name);
+        alert('Por favor, selecciona un archivo Excel (.xlsx o .xls)');
         return;
     }
 
-    // Mostrar carga
-    mostrarCarga(true);
+    // Mostrar que está cargando
+    const dropZone = document.getElementById('dropZone');
+    dropZone.innerHTML = '<div class="text-blue-600 font-bold">Procesando archivo...</div>';
 
     const reader = new FileReader();
     
     reader.onerror = function(e) {
         console.error('Error en FileReader:', e);
         alert('Error al leer el archivo');
-        mostrarCarga(false);
+        location.reload();
     };
     
     reader.onload = function(e) {
         try {
-            console.log('Archivo leído, procesando datos...');
             const data = new Uint8Array(e.target.result);
-            
-            // Verificar que XLSX esté disponible
-            if (typeof XLSX === 'undefined') {
-                throw new Error('Librería XLSX no cargada. Recargá la página.');
-            }
-
             const workbook = XLSX.read(data, { type: 'array' });
-            console.log('Hojas encontradas:', workbook.SheetNames);
             
-            if (workbook.SheetNames.length === 0) {
-                throw new Error('El archivo no tiene hojas');
-            }
-
+            console.log('Hojas:', workbook.SheetNames);
+            
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
 
             console.log('Filas totales:', jsonData.length);
 
             if (jsonData.length < 2) {
-                throw new Error('El archivo parece estar vacío o no tiene datos (solo encabezado)');
+                throw new Error('El archivo no tiene datos suficientes');
             }
 
             // Procesar encabezados y datos
             const headers = jsonData[0].map(h => String(h).trim());
-            console.log('Columnas encontradas:', headers);
-            
             datosTramites = [];
-            let filasVacias = 0;
 
             for (let i = 1; i < jsonData.length; i++) {
                 const row = jsonData[i];
                 
-                // Verificar si la fila está vacía
+                // Saltar filas vacías
                 if (!row || row.length === 0 || row.every(cell => !cell || String(cell).trim() === '')) {
-                    filasVacias++;
                     continue;
                 }
                 
                 const obj = {};
-                let tieneDatos = false;
-                
                 headers.forEach((header, index) => {
                     const valor = row[index] !== undefined && row[index] !== null ? String(row[index]).trim() : '';
                     obj[header] = valor;
-                    if (valor) tieneDatos = true;
                 });
                 
-                if (tieneDatos) {
-                    datosTramites.push(obj);
-                }
+                datosTramites.push(obj);
             }
 
-            console.log('Filas con datos:', datosTramites.length, 'Filas vacías omitidas:', filasVacias);
+            console.log('Registros procesados:', datosTramites.length);
 
             if (datosTramites.length === 0) {
-                throw new Error('No se encontraron filas con datos en el archivo');
+                throw new Error('No se encontraron datos válidos');
             }
 
             // Detectar columnas
             detectarColumnas(headers);
-            
-            // Verificar columna obligatoria
-            if (!columnasDetectadas.jud) {
-                console.warn('Columnas detectadas:', columnasDetectadas);
-                // No lanzamos error, dejamos que el usuario vea el mapeo
-            }
 
-            // Mostrar info
+            // Mostrar info en pantalla
             document.getElementById('fileName').textContent = file.name;
             document.getElementById('rowCount').textContent = datosTramites.length + ' registros';
             document.getElementById('fileInfo').classList.remove('hidden');
 
-            mostrarCarga(false);
+            // Restaurar drop zone
+            dropZone.innerHTML = `
+                <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden">
+                <div class="cursor-pointer">
+                    <div class="text-4xl mb-2">📊</div>
+                    <p class="text-gray-600 mb-2">Haz clic para seleccionar o arrastra tu archivo aquí</p>
+                    <p class="text-sm text-gray-400">Solo archivos Excel (.xlsx)</p>
+                </div>
+            `;
             
-            // Ir al paso 2 después de un breve delay
-            setTimeout(() => {
-                goToStep2();
-            }, 500);
+            // Reconfigurar event listeners porque recreamos el input
+            setTimeout(configurarEventListeners, 100);
+            
+            // Ir al paso 2
+            setTimeout(goToStep2, 500);
 
         } catch (error) {
-            console.error('Error al procesar archivo:', error);
-            mostrarCarga(false);
-            alert('Error al procesar el archivo:\n' + error.message);
+            console.error('Error:', error);
+            alert('Error: ' + error.message);
+            location.reload();
         }
     };
     
     reader.readAsArrayBuffer(file);
-}
-
-function mostrarCarga(mostrar) {
-    // Podés agregar un spinner acá si querés
-    const dropZone = document.getElementById('dropZone');
-    if (mostrar) {
-        dropZone.style.opacity = '0.6';
-        dropZone.innerHTML += '<div id="loadingMsg" class="mt-2 text-blue-600 font-bold">Procesando...</div>';
-    } else {
-        dropZone.style.opacity = '1';
-        const loading = document.getElementById('loadingMsg');
-        if (loading) loading.remove();
-    }
 }
 
 function detectarColumnas(headers) {
@@ -266,24 +207,23 @@ function detectarColumnas(headers) {
         causaOrdenAnio: null
     };
 
-    // Buscar columnas (case insensitive, espacios)
     headers.forEach(header => {
         const h = header.toLowerCase().replace(/[\s_.]/g, '');
         
         if (h === 'jud' || h === 'judid') columnasDetectadas.jud = header;
-        if (h === 'estadoletra' || h === 'estado' || h === 'estadoletra') columnasDetectadas.estadoletra = header;
+        if (h === 'estadoletra' || h === 'estado') columnasDetectadas.estadoletra = header;
         if (h.includes('telefono') || h.includes('tel')) columnasDetectadas.telefono = header;
-        if (h.includes('mail') || h.includes('email') || h.includes('email')) columnasDetectadas.email = header;
+        if (h.includes('mail') || h.includes('email')) columnasDetectadas.email = header;
         if (h.includes('observacion')) columnasDetectadas.observaciones = header;
-        if ((h.includes('expte') || h.includes('expediente')) && (h.includes('judicial') || h.includes('jud'))) columnasDetectadas.expteJudicial = header;
-        if (h === 'causaordenaño' || h === 'causaordenano' || h === 'causa') columnasDetectadas.causaOrdenAnio = header;
+        if ((h.includes('expte') || h.includes('expediente')) && h.includes('judicial')) columnasDetectadas.expteJudicial = header;
+        if (h === 'causaordenaño' || h === 'causaordenano') columnasDetectadas.causaOrdenAnio = header;
     });
 
     console.log('Columnas detectadas:', columnasDetectadas);
 }
 
 // ==========================================
-// PASO 2: VERIFICACIÓN
+// NAVEGACIÓN DE PASOS
 // ==========================================
 
 function goToStep2() {
@@ -292,175 +232,117 @@ function goToStep2() {
         return;
     }
 
-    // Actualizar UI pasos
-    actualizarPasosUI(2);
-
-    // Ocultar/mostrar paneles
+    // Actualizar UI
+    actualizarPasos(2);
+    
     document.getElementById('panel1').classList.add('hidden');
     document.getElementById('panel2').classList.remove('hidden');
     document.getElementById('panel3').classList.add('hidden');
     document.getElementById('panel4').classList.add('hidden');
 
-    // Mostrar mapeo de columnas
     mostrarMapeoColumnas();
-
-    // Mostrar preview
     mostrarPreview();
 }
 
-function actualizarPasosUI(pasoActivo) {
-    const pasos = [1, 2, 3, 4];
-    pasos.forEach(num => {
-        const el = document.getElementById('step' + num);
-        el.classList.remove('step-active', 'step-completed');
-        el.classList.add('border-gray-200');
-        
-        if (num < pasoActivo) {
-            el.classList.add('step-completed');
-        } else if (num === pasoActivo) {
-            el.classList.add('step-active');
-        }
-    });
-}
-
-function mostrarMapeoColumnas() {
-    const container = document.getElementById('columnMapping');
-    if (!container) return;
-
-    const mapeos = [
-        { campo: 'Jud / Jud_ID', columna: columnasDetectadas.jud, requerido: true },
-        { campo: 'Estadoletra / Estado', columna: columnasDetectadas.estadoletra, requerido: true },
-        { campo: 'Teléfono', columna: columnasDetectadas.telefono, requerido: false },
-        { campo: 'E-mail', columna: columnasDetectadas.email, requerido: false },
-        { campo: 'Observaciones', columna: columnasDetectadas.observaciones, requerido: false },
-        { campo: 'Expte. Judicial', columna: columnasDetectadas.expteJudicial, requerido: false },
-        { campo: 'CausaOdenAño (verif.)', columna: columnasDetectadas.causaOrdenAnio, requerido: false }
-    ];
-
-    container.innerHTML = mapeos.map(m => `
-        <div class="flex items-center justify-between p-3 ${m.requerido ? 'bg-red-50' : 'bg-gray-50'} rounded border ${m.columna ? 'border-green-300' : (m.requerido ? 'border-red-300' : 'border-gray-200')}">
-            <div>
-                <span class="font-semibold ${m.requerido ? 'text-red-700' : 'text-gray-700'}">${m.campo}</span>
-                ${m.requerido ? '<span class="text-red-500 text-xs">* Requerido</span>' : ''}
-            </div>
-            <div class="text-right">
-                ${m.columna 
-                    ? `<span class="text-green-600 font-mono text-sm">✓ ${m.columna}</span>` 
-                    : `<span class="text-red-400 text-sm">${m.requerido ? 'No detectado' : 'No encontrado'}</span>`
-                }
-            </div>
-        </div>
-    `).join('');
-
-    // Validar que tengamos Jud
-    if (!columnasDetectadas.jud) {
-        alert('⚠️ ATENCIÓN: No se detectó la columna "Jud" o "Jud_ID".\n\nColumnas encontradas: ' + Object.keys(datosTramites[0]).join(', '));
-    }
-}
-
-function mostrarPreview() {
-    const thead = document.getElementById('previewHeader');
-    const tbody = document.getElementById('previewBody');
-    
-    if (!thead || !tbody) return;
-
-    const headers = Object.keys(datosTramites[0]);
-
-    // Headers
-    thead.innerHTML = headers.map(h => 
-        `<th class="p-2 text-left border-b ${esColumnaImportante(h) ? 'bg-blue-100 font-bold' : 'bg-gray-100'}">${h}</th>`
-    ).join('');
-
-    // Datos (primeros 5)
-    tbody.innerHTML = datosTramites.slice(0, 5).map((row, idx) => `
-        <tr class="border-b hover:bg-gray-50 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
-            ${headers.map(h => `
-                <td class="p-2 border-r ${esColumnaImportante(h) ? 'bg-blue-50' : ''}">
-                    ${truncarTexto(row[h] || '', 30)}
-                </td>
-            `).join('')}
-        </tr>
-    `).join('');
-}
-
-function esColumnaImportante(header) {
-    const h = header.toLowerCase();
-    return ['jud', 'estadoletra', 'estado', 'telefono', 'email', 'observaciones', 'expte'].some(c => h.includes(c));
-}
-
-function truncarTexto(texto, max) {
-    if (!texto) return '<span class="text-gray-400">-</span>';
-    const str = String(texto);
-    return str.length > max ? str.substring(0, max) + '...' : str;
-}
-
-// ==========================================
-// PASO 3: CONFIGURACIÓN
-// ==========================================
-
 function goToStep3() {
     if (!columnasDetectadas.jud) {
-        if (!confirm('No se detectó la columna Jud. ¿Querés continuar igual?')) {
-            return;
-        }
+        alert('No se detectó la columna Jud. Verificá el archivo.');
+        return;
     }
 
-    actualizarPasosUI(3);
-
+    actualizarPasos(3);
+    
     document.getElementById('panel2').classList.add('hidden');
     document.getElementById('panel3').classList.remove('hidden');
 }
 
-function goToStep2() {
-    actualizarPasosUI(2);
-    document.getElementById('panel3').classList.add('hidden');
-    document.getElementById('panel2').classList.remove('hidden');
-}
-
-// ==========================================
-// PASO 4: EJECUCIÓN
-// ==========================================
-
 function goToStep4() {
-    actualizarPasosUI(4);
-
+    actualizarPasos(4);
+    
     document.getElementById('panel3').classList.add('hidden');
     document.getElementById('panel4').classList.remove('hidden');
 
-    // Mostrar resumen
     const config = obtenerConfiguracion();
-    const camposSeleccionados = [];
-    if (config.updateEstado) camposSeleccionados.push('Estado');
-    if (config.updateTelefono) camposSeleccionados.push('Teléfono');
-    if (config.updateEmail) camposSeleccionados.push('Email');
-    if (config.updateObservaciones) camposSeleccionados.push('Observaciones');
-    if (config.updateExpte) camposSeleccionados.push('Expediente Judicial');
+    const campos = [];
+    if (config.updateEstado) campos.push('Estado');
+    if (config.updateTelefono) campos.push('Teléfono');
+    if (config.updateEmail) campos.push('Email');
+    if (config.updateObservaciones) campos.push('Observaciones');
+    if (config.updateExpte) campos.push('Expediente Judicial');
 
     document.getElementById('resumenFusion').innerHTML = `
-        <h4 class="font-bold mb-2">Resumen de configuración:</h4>
+        <h4 class="font-bold mb-2">Resumen:</h4>
         <ul class="text-sm space-y-1">
-            <li>• Total registros a procesar: <strong>${datosTramites.length}</strong></li>
-            <li>• Campos a actualizar: <strong>${camposSeleccionados.join(', ') || 'Ninguno'}</strong></li>
-            <li>• Modo teléfonos/emails: <strong>${config.modoFusion}</strong></li>
-            <li>• Sobrescribir existentes: <strong>${config.soloVacios ? 'No (solo vacíos)' : 'Sí'}</strong></li>
+            <li>• Total registros: <strong>${datosTramites.length}</strong></li>
+            <li>• Campos a actualizar: <strong>${campos.join(', ') || 'Ninguno'}</strong></li>
+            <li>• Modo: <strong>${config.modoFusion}</strong></li>
         </ul>
     `;
 }
 
+function actualizarPasos(pasoActivo) {
+    for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById('step' + i);
+        el.classList.remove('step-active', 'step-completed');
+        
+        if (i < pasoActivo) {
+            el.classList.add('step-completed');
+        } else if (i === pasoActivo) {
+            el.classList.add('step-active');
+        }
+    }
+}
+
+function mostrarMapeoColumnas() {
+    const container = document.getElementById('columnMapping');
+    
+    const mapeos = [
+        { campo: 'Jud', columna: columnasDetectadas.jud, req: true },
+        { campo: 'Estadoletra/Estado', columna: columnasDetectadas.estadoletra, req: true },
+        { campo: 'Teléfono', columna: columnasDetectadas.telefono, req: false },
+        { campo: 'E-mail', columna: columnasDetectadas.email, req: false },
+        { campo: 'Observaciones', columna: columnasDetectadas.observaciones, req: false },
+        { campo: 'Expte. Judicial', columna: columnasDetectadas.expteJudicial, req: false },
+    ];
+
+    container.innerHTML = mapeos.map(m => `
+        <div class="flex justify-between p-3 ${m.req ? 'bg-red-50' : 'bg-gray-50'} rounded border ${m.columna ? 'border-green-300' : (m.req ? 'border-red-300' : 'border-gray-200')}">
+            <span class="font-semibold ${m.req ? 'text-red-700' : 'text-gray-700'}">${m.campo}</span>
+            <span class="${m.columna ? 'text-green-600' : 'text-red-400'} text-sm">
+                ${m.columna ? '✓ ' + m.columna : (m.req ? 'No detectado' : 'No encontrado')}
+            </span>
+        </div>
+    `).join('');
+}
+
+function mostrarPreview() {
+    const headers = Object.keys(datosTramites[0]);
+    const thead = document.getElementById('previewHeader');
+    const tbody = document.getElementById('previewBody');
+
+    thead.innerHTML = headers.map(h => `<th class="p-2 bg-gray-200 text-left">${h}</th>`).join('');
+    
+    tbody.innerHTML = datosTramites.slice(0, 5).map(row => `
+        <tr class="border-b">
+            ${headers.map(h => `<td class="p-2 border-r text-sm">${row[h] || '-'}</td>`).join('')}
+        </tr>
+    `).join('');
+}
+
 function obtenerConfiguracion() {
     return {
-        updateEstado: document.getElementById('updateEstado')?.checked ?? true,
-        updateTelefono: document.getElementById('updateTelefono')?.checked ?? true,
-        updateEmail: document.getElementById('updateEmail')?.checked ?? true,
-        updateObservaciones: document.getElementById('updateObservaciones')?.checked ?? true,
-        updateExpte: document.getElementById('updateExpte')?.checked ?? true,
-        soloVacios: document.getElementById('soloVacios')?.checked ?? false,
-        modoFusion: document.getElementById('modoFusion')?.value ?? 'concatenar'
+        updateEstado: document.getElementById('updateEstado').checked,
+        updateTelefono: document.getElementById('updateTelefono').checked,
+        updateEmail: document.getElementById('updateEmail').checked,
+        updateObservaciones: document.getElementById('updateObservaciones').checked,
+        updateExpte: document.getElementById('updateExpte').checked,
+        soloVacios: document.getElementById('soloVacios').checked,
+        modoFusion: document.getElementById('modoFusion').value
     };
 }
 
 // ==========================================
-// SIMULAR Y EJECUTAR FUSIÓN
+// EJECUCIÓN DE FUSIÓN
 // ==========================================
 
 async function simularFusion() {
@@ -468,66 +350,52 @@ async function simularFusion() {
     resultadosFusion = [];
     
     mostrarProgress(true);
-    logProgress('Iniciando SIMULACIÓN (no se guardarán cambios)...');
+    logProgress('Simulando...');
 
     let encontrados = 0;
     let noEncontrados = 0;
 
-    // Simular procesamiento
-    for (let i = 0; i < Math.min(datosTramites.length, 100); i++) { // Limitar a 100 para simulación
+    // Simular solo los primeros 50 para no tardar mucho
+    const limite = Math.min(datosTramites.length, 50);
+
+    for (let i = 0; i < limite; i++) {
         const tramite = datosTramites[i];
         const judId = tramite[columnasDetectadas.jud];
 
         if (!judId) {
-            resultadosFusion.push({
-                judId: 'SIN_ID',
-                encontrado: false,
-                error: 'Sin Jud ID'
-            });
             noEncontrados++;
             continue;
         }
 
-        // Simular que encontramos el 85% para la demo
-        const encontrado = Math.random() > 0.15;
-        
-        if (encontrado) {
+        // Simular 90% de éxito
+        if (Math.random() > 0.1) {
             encontrados++;
-            const cambios = calcularCambios(tramite, {}, config);
             resultadosFusion.push({
                 judId: judId,
                 encontrado: true,
-                simulado: true,
-                cambios: cambios,
-                datosTramite: tramite
+                simulado: true
             });
-            logProgress(`✅ Simulado: Jud ${judId} - ${cambios.length} cambios`);
         } else {
             noEncontrados++;
             resultadosFusion.push({
                 judId: judId,
-                encontrado: false,
-                simulado: true,
-                datosTramite: tramite
+                encontrado: false
             });
         }
 
-        if (i % 10 === 0) {
-            actualizarProgress(((i + 1) / datosTramites.length) * 100);
-        }
+        actualizarProgress(((i + 1) / limite) * 100);
     }
 
     mostrarResultados(encontrados, noEncontrados, 0);
-    logProgress('Simulación completada. Revisá los resultados antes de ejecutar la fusión real.');
+    logProgress('Simulación completada');
 }
 
 async function ejecutarFusion() {
-    if (!supabaseClient) {
-        alert('Error: No se pudo conectar con Supabase. Recargá la página e intentá de nuevo.');
-        return;
-    }
+    if (!confirm('¿Actualizar la base de datos?')) return;
 
-    if (!confirm('¿Estás seguro de que querés actualizar la base de datos? Esta acción modificará datos en Supabase.')) {
+    // Verificar que supabaseClient existe (del main.js)
+    if (typeof supabaseClient === 'undefined' || !supabaseClient) {
+        alert('Error: No hay conexión con Supabase');
         return;
     }
 
@@ -535,7 +403,7 @@ async function ejecutarFusion() {
     resultadosFusion = [];
     
     mostrarProgress(true);
-    logProgress('Conectando con Supabase...');
+    logProgress('Iniciando fusión real...');
 
     let exitosos = 0;
     let noEncontrados = 0;
@@ -546,18 +414,12 @@ async function ejecutarFusion() {
         const judId = tramite[columnasDetectadas.jud];
 
         if (!judId) {
-            resultadosFusion.push({ 
-                judId: 'SIN_ID', 
-                encontrado: false, 
-                error: 'Sin Jud ID' 
-            });
+            resultadosFusion.push({ judId: 'SIN_ID', error: 'Sin Jud' });
             noEncontrados++;
             continue;
         }
 
         try {
-            logProgress(`Buscando Jud ${judId}...`);
-            
             // Buscar en Supabase
             const { data: municipales, error: searchError } = await supabaseClient
                 .from('deudas')
@@ -567,32 +429,21 @@ async function ejecutarFusion() {
             if (searchError) throw searchError;
 
             if (!municipales || municipales.length === 0) {
-                resultadosFusion.push({ 
-                    judId: judId, 
-                    encontrado: false, 
-                    datosTramite: tramite 
-                });
+                resultadosFusion.push({ judId: judId, encontrado: false });
                 noEncontrados++;
-                logProgress(`⚠️ Jud ${judId}: No encontrado en municipal`);
+                logProgress(`No encontrado: ${judId}`);
                 continue;
             }
 
-            // Preparar actualización
             const registro = municipales[0];
             const updateData = prepararUpdate(tramite, registro, config);
 
             if (Object.keys(updateData).length === 0) {
-                resultadosFusion.push({ 
-                    judId: judId, 
-                    encontrado: true, 
-                    actualizado: false,
-                    mensaje: 'Sin cambios necesarios'
-                });
+                resultadosFusion.push({ judId: judId, encontrado: true, actualizado: false });
                 exitosos++;
                 continue;
             }
 
-            // Ejecutar update
             const { error: updateError } = await supabaseClient
                 .from('deudas')
                 .update(updateData)
@@ -604,57 +455,21 @@ async function ejecutarFusion() {
                 judId: judId, 
                 encontrado: true, 
                 actualizado: true,
-                cambios: Object.keys(updateData),
                 expediente: registro.expediente
             });
             exitosos++;
-            logProgress(`✅ Jud ${judId}: Actualizado`);
+            logProgress(`✓ Actualizado: ${judId}`);
 
         } catch (error) {
-            resultadosFusion.push({ 
-                judId: judId, 
-                encontrado: false, 
-                error: error.message 
-            });
+            resultadosFusion.push({ judId: judId, error: error.message });
             errores++;
-            logProgress(`❌ Jud ${judId}: Error - ${error.message}`);
+            logProgress(`✗ Error en ${judId}: ${error.message}`);
         }
 
         actualizarProgress(((i + 1) / datosTramites.length) * 100);
     }
 
     mostrarResultados(exitosos, noEncontrados, errores);
-}
-
-function calcularCambios(tramite, registroActual, config) {
-    const cambios = [];
-
-    if (config.updateEstado && columnasDetectadas.estadoletra) {
-        const estado = tramite[columnasDetectadas.estadoletra];
-        if (estado) cambios.push({ campo: 'estado_fusion', valor: estado });
-    }
-
-    if (config.updateTelefono && columnasDetectadas.telefono) {
-        const tel = tramite[columnasDetectadas.telefono];
-        if (tel) cambios.push({ campo: 'telefono_fusion', valor: tel });
-    }
-
-    if (config.updateEmail && columnasDetectadas.email) {
-        const email = tramite[columnasDetectadas.email];
-        if (email) cambios.push({ campo: 'email_fusion', valor: email });
-    }
-
-    if (config.updateObservaciones && columnasDetectadas.observaciones) {
-        const obs = tramite[columnasDetectadas.observaciones];
-        if (obs) cambios.push({ campo: 'observaciones_fusion', valor: obs });
-    }
-
-    if (config.updateExpte && columnasDetectadas.expteJudicial) {
-        const expte = tramite[columnasDetectadas.expteJudicial];
-        if (expte) cambios.push({ campo: 'expte_judicial', valor: expte });
-    }
-
-    return cambios;
 }
 
 function prepararUpdate(tramite, registro, config) {
@@ -664,7 +479,7 @@ function prepararUpdate(tramite, registro, config) {
     // Estado
     if (config.updateEstado && columnasDetectadas.estadoletra) {
         const estado = tramite[columnasDetectadas.estadoletra]?.toUpperCase().trim();
-        if (estado && ['X', 'D', 'S', 'E', 'C', 'P', 'B'].includes(estado)) {
+        if (estado && ['X','D','S','E','C','P','B'].includes(estado)) {
             if (!config.soloVacios || !registro.estado_fusion) {
                 updateData.estado_fusion = estado;
             }
@@ -673,41 +488,36 @@ function prepararUpdate(tramite, registro, config) {
 
     // Teléfono
     if (config.updateTelefono && columnasDetectadas.telefono) {
-        const telNuevo = tramite[columnasDetectadas.telefono];
-        const telProcesado = fusionarContactos(
-            registro.telefono_fusion || '',
-            telNuevo,
-            config.modoFusion
-        );
-        if (telProcesado && (!config.soloVacios || !registro.telefono_fusion)) {
-            updateData.telefono_fusion = telProcesado;
+        const tel = tramite[columnasDetectadas.telefono];
+        if (tel) {
+            const actual = registro.telefono_fusion || '';
+            const nuevo = fusionarTexto(actual, tel, config.modoFusion);
+            if (nuevo && (!config.soloVacios || !actual)) {
+                updateData.telefono_fusion = nuevo;
+            }
         }
     }
 
     // Email
     if (config.updateEmail && columnasDetectadas.email) {
-        const emailNuevo = tramite[columnasDetectadas.email];
-        const emailProcesado = fusionarContactos(
-            registro.email_fusion || '',
-            emailNuevo,
-            config.modoFusion
-        );
-        if (emailProcesado && (!config.soloVacios || !registro.email_fusion)) {
-            updateData.email_fusion = emailProcesado;
+        const email = tramite[columnasDetectadas.email];
+        if (email) {
+            const actual = registro.email_fusion || '';
+            const nuevo = fusionarTexto(actual, email, config.modoFusion);
+            if (nuevo && (!config.soloVacios || !actual)) {
+                updateData.email_fusion = nuevo;
+            }
         }
     }
 
     // Observaciones
     if (config.updateObservaciones && columnasDetectadas.observaciones) {
-        const obsNueva = tramite[columnasDetectadas.observaciones];
-        if (obsNueva) {
-            const obsActual = registro.observaciones_fusion || '';
-            const obsCombinada = obsActual 
-                ? `${obsActual} | [${fecha}] ${obsNueva}`
-                : `[${fecha}] ${obsNueva}`;
-            
-            if (!config.soloVacios || !registro.observaciones_fusion) {
-                updateData.observaciones_fusion = obsCombinada;
+        const obs = tramite[columnasDetectadas.observaciones];
+        if (obs) {
+            const actual = registro.observaciones_fusion || '';
+            const nueva = actual ? `${actual} | [${fecha}] ${obs}` : `[${fecha}] ${obs}`;
+            if (!config.soloVacios || !actual) {
+                updateData.observaciones_fusion = nueva;
             }
         }
     }
@@ -720,7 +530,6 @@ function prepararUpdate(tramite, registro, config) {
         }
     }
 
-    // Fecha de actualización
     if (Object.keys(updateData).length > 0) {
         updateData.fecha_ultima_actualizacion = new Date().toISOString();
     }
@@ -728,134 +537,90 @@ function prepararUpdate(tramite, registro, config) {
     return updateData;
 }
 
-// ==========================================
-// PROCESAMIENTO DE CONTACTOS
-// ==========================================
-
-function fusionarContactos(existente, nuevo, modo) {
+function fusionarTexto(existente, nuevo, modo) {
     if (!nuevo) return existente;
-    if (!existente) return limpiarContacto(nuevo);
+    if (!existente) return nuevo;
 
-    const existentes = existente.split('/').map(s => s.trim()).filter(s => s);
-    const nuevos = nuevo.split('/').map(s => s.trim()).filter(s => s);
+    if (modo === 'reemplazar') return nuevo;
 
-    if (modo === 'reemplazar') {
-        return limpiarContacto(nuevo);
-    }
+    const itemsExistentes = existente.split('/').map(s => s.trim()).filter(s => s);
+    const itemsNuevos = nuevo.split('/').map(s => s.trim()).filter(s => s);
 
     if (modo === 'solo_nuevos') {
-        const unicos = nuevos.filter(n => !existentes.some(e => normalizarContacto(e) === normalizarContacto(n)));
+        const unicos = itemsNuevos.filter(n => !itemsExistentes.includes(n));
         if (unicos.length === 0) return existente;
-        return [...existentes, ...unicos].join(' / ');
+        return [...itemsExistentes, ...unicos].join(' / ');
     }
 
-    // Modo concatenar (default)
-    const todos = [...existentes];
-    nuevos.forEach(n => {
-        if (!todos.some(t => normalizarContacto(t) === normalizarContacto(n))) {
-            todos.push(n);
-        }
+    // concatenar
+    const todos = [...itemsExistentes];
+    itemsNuevos.forEach(n => {
+        if (!todos.includes(n)) todos.push(n);
     });
-
     return todos.join(' / ');
 }
 
-function limpiarContacto(contacto) {
-    return contacto.replace(/\s+/g, ' ').trim();
-}
-
-function normalizarContacto(contacto) {
-    return contacto.toLowerCase().replace(/[^a-z0-9@.]/g, '');
-}
-
 // ==========================================
-// UI Y UTILIDADES
+// UI UTILIDADES
 // ==========================================
 
-function mostrarProgress(show) {
-    const el = document.getElementById('progressArea');
-    if (el) el.classList.toggle('hidden', !show);
-    if (show) {
-        const resultados = document.getElementById('resultadosArea');
-        if (resultados) resultados.classList.add('hidden');
+function mostrarProgress(mostrar) {
+    document.getElementById('progressArea').classList.toggle('hidden', !mostrar);
+    if (mostrar) {
+        document.getElementById('resultadosArea').classList.add('hidden');
     }
 }
 
 function actualizarProgress(porcentaje) {
-    const bar = document.getElementById('progressBar');
-    const text = document.getElementById('progressPercent');
-    if (bar) bar.style.width = porcentaje + '%';
-    if (text) text.textContent = Math.round(porcentaje) + '%';
+    document.getElementById('progressBar').style.width = porcentaje + '%';
+    document.getElementById('progressPercent').textContent = Math.round(porcentaje) + '%';
 }
 
 function logProgress(mensaje) {
     const log = document.getElementById('progressLog');
-    if (!log) return;
     const hora = new Date().toLocaleTimeString();
     log.innerHTML += `[${hora}] ${mensaje}\n`;
     log.scrollTop = log.scrollHeight;
 }
 
 function mostrarResultados(exitosos, noEncontrados, errores) {
-    const progressArea = document.getElementById('progressArea');
-    const resultadosArea = document.getElementById('resultadosArea');
-    
-    if (progressArea) progressArea.classList.add('hidden');
-    if (resultadosArea) resultadosArea.classList.remove('hidden');
+    document.getElementById('progressArea').classList.add('hidden');
+    document.getElementById('resultadosArea').classList.remove('hidden');
 
-    const elExitosos = document.getElementById('countExitosos');
-    const elNoEncontrados = document.getElementById('countNoEncontrados');
-    const elErrores = document.getElementById('countErrores');
+    document.getElementById('countExitosos').textContent = exitosos;
+    document.getElementById('countNoEncontrados').textContent = noEncontrados;
+    document.getElementById('countErrores').textContent = errores;
 
-    if (elExitosos) elExitosos.textContent = exitosos;
-    if (elNoEncontrados) elNoEncontrados.textContent = noEncontrados;
-    if (elErrores) elErrores.textContent = errores;
-
-    // Mostrar detalles
     const detalles = document.getElementById('detallesResultado');
-    if (detalles) {
-        detalles.innerHTML = resultadosFusion.slice(0, 100).map(r => { // Limitar a 100 para performance
-            if (r.error) return `<div class="text-red-600">❌ ${r.judId}: ${r.error}</div>`;
-            if (!r.encontrado) return `<div class="text-yellow-600">⚠️ ${r.judId}: No encontrado</div>`;
-            if (!r.actualizado) return `<div class="text-blue-600">ℹ️ ${r.judId}: Sin cambios</div>`;
-            return `<div class="text-green-600">✅ ${r.judId} (${r.expediente || 'N/A'}): ${r.cambios?.join(', ')}</div>`;
-        }).join('');
-        
-        if (resultadosFusion.length > 100) {
-            detalles.innerHTML += `<div class="text-gray-500 mt-2">... y ${resultadosFusion.length - 100} resultados más</div>`;
-        }
-    }
+    detalles.innerHTML = resultadosFusion.slice(0, 50).map(r => {
+        if (r.error) return `<div class="text-red-600">❌ ${r.judId}: ${r.error}</div>`;
+        if (!r.encontrado) return `<div class="text-yellow-600">⚠️ ${r.judId}: No encontrado</div>`;
+        if (!r.actualizado) return `<div class="text-blue-600">ℹ️ ${r.judId}: Sin cambios</div>`;
+        return `<div class="text-green-600">✅ ${r.judId} (${r.expediente || 'N/A'})</div>`;
+    }).join('');
 }
 
 function descargarResultados() {
-    if (resultadosFusion.length === 0) {
-        alert('No hay resultados para descargar');
-        return;
-    }
-
+    if (resultadosFusion.length === 0) return;
+    
     const data = resultadosFusion.map(r => ({
         'Jud ID': r.judId,
         'Encontrado': r.encontrado ? 'Sí' : 'No',
-        'Actualizado': r.actualizado ? 'Sí' : (r.encontrado ? 'No necesario' : 'N/A'),
-        'Cambios': r.cambios?.join(', ') || '',
-        'Error': r.error || '',
-        'Expediente': r.expediente || ''
+        'Actualizado': r.actualizado ? 'Sí' : 'No',
+        'Error': r.error || ''
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Resultados');
-    XLSX.writeFile(wb, `Resultados_Fusion_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `Fusion_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
 function descargarNoEncontrados() {
     const noEncontrados = resultadosFusion.filter(r => !r.encontrado);
-    if (noEncontrados.length === 0) {
-        alert('No hay registros no encontrados para descargar');
-        return;
-    }
+    if (noEncontrados.length === 0) return;
 
-    const data = noEncontrados.map(r => r.datosTramite || { Jud: r.judId });
+    const data = noEncontrados.map(r => ({ Jud: r.judId }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'No Encontrados');
@@ -863,12 +628,12 @@ function descargarNoEncontrados() {
 }
 
 function resetAll() {
-    if (confirm('¿Volver al inicio? Se perderán los datos cargados.')) {
+    if (confirm('¿Volver al inicio?')) {
         location.reload();
     }
 }
 
-// Exponer funciones necesarias globalmente para los onclick
+// Exponer funciones globales
 window.goToStep2 = goToStep2;
 window.goToStep3 = goToStep3;
 window.goToStep4 = goToStep4;
