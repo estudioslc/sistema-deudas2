@@ -55,22 +55,23 @@ function configurarEventListeners() {
         if (e.target !== fileInput) fileInput.click();
     });
 
+    // Evento change corregido - evita doble procesamiento
     fileInput.addEventListener('change', function(e) {
         // Evitar doble procesamiento
         if (this.dataset.procesando === "true") return;
-        
+
         if (e.target.files.length > 0) {
             this.dataset.procesando = "true";
             procesarArchivo(e.target.files[0]);
-            
+
             // Resetear después de 2 segundos para permitir otro archivo
             setTimeout(() => {
                 this.dataset.procesando = "false";
                 this.value = ''; // Limpiar input
             }, 2000);
         }
-    });
-}  // <-- AGREGAR ESTA LLAVE
+    });  // ← LLAVE AGREGADA AQUÍ (cierra función anónima del addEventListener)
+}  // ← Esta llave cierra configurarEventListeners
 
 // ==========================================
 // PROCESAR ARCHIVO - CORREGIDO (SIN DOBLE CLIC)
