@@ -51,38 +51,36 @@ function configurarEventListeners() {
         if (files.length > 0) procesarArchivo(files[0]);
     });
 
-        // SOLUCIÓN: Controlar que no se reabra el diálogo mientras está procesando
     let dialogoAbierto = false;
 
     dropZone.addEventListener('click', function(e) {
-        // No abrir si ya está abierto o si se hizo clic en el input mismo
         if (dialogoAbierto || e.target === fileInput) return;
         
         dialogoAbierto = true;
+
+        // Cuando el foco vuelve a la ventana (diálogo cerrado), reseteamos el flag
+        window.addEventListener('focus', function onFocus() {
+            window.removeEventListener('focus', onFocus);
+            setTimeout(() => {
+                dialogoAbierto = false;
+            }, 300);
+        });
+
         fileInput.click();
-        
-        // Resetear después de un tiempo para permitir reabrir si cancelaron
-        setTimeout(() => {
-            dialogoAbierto = false;
-        }, 1000);
     });
 
-    // Evento change corregido - evita doble procesamiento
     fileInput.addEventListener('change', function(e) {
-        // Resetear flag del diálogo
         dialogoAbierto = false;
-        
-        // Evitar doble procesamiento del mismo archivo
+
         if (this.dataset.procesando === "true") return;
 
         if (e.target.files.length > 0) {
             this.dataset.procesando = "true";
             procesarArchivo(e.target.files[0]);
 
-            // Resetear después de 2 segundos para permitir otro archivo
             setTimeout(() => {
                 this.dataset.procesando = "false";
-                this.value = ''; // Limpiar input
+                this.value = '';
             }, 2000);
         }
     });
