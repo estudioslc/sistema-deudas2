@@ -51,13 +51,28 @@ function configurarEventListeners() {
         if (files.length > 0) procesarArchivo(files[0]);
     });
 
+        // SOLUCIÓN: Controlar que no se reabra el diálogo mientras está procesando
+    let dialogoAbierto = false;
+
     dropZone.addEventListener('click', function(e) {
-        if (e.target !== fileInput) fileInput.click();
+        // No abrir si ya está abierto o si se hizo clic en el input mismo
+        if (dialogoAbierto || e.target === fileInput) return;
+        
+        dialogoAbierto = true;
+        fileInput.click();
+        
+        // Resetear después de un tiempo para permitir reabrir si cancelaron
+        setTimeout(() => {
+            dialogoAbierto = false;
+        }, 1000);
     });
 
     // Evento change corregido - evita doble procesamiento
     fileInput.addEventListener('change', function(e) {
-        // Evitar doble procesamiento
+        // Resetear flag del diálogo
+        dialogoAbierto = false;
+        
+        // Evitar doble procesamiento del mismo archivo
         if (this.dataset.procesando === "true") return;
 
         if (e.target.files.length > 0) {
@@ -70,9 +85,8 @@ function configurarEventListeners() {
                 this.value = ''; // Limpiar input
             }, 2000);
         }
-    });  // ← LLAVE AGREGADA AQUÍ (cierra función anónima del addEventListener)
-}  // ← Esta llave cierra configurarEventListeners
-
+    });
+}
 // ==========================================
 // PROCESAR ARCHIVO - CORREGIDO (SIN DOBLE CLIC)
 // ==========================================
