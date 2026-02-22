@@ -55,21 +55,22 @@ function configurarEventListeners() {
         if (e.target !== fileInput) fileInput.click();
     });
 
-fileInput.addEventListener('change', function(e) {
-    // Evitar doble procesamiento
-    if (this.dataset.procesando === "true") return;
-    
-    if (e.target.files.length > 0) {
-        this.dataset.procesando = "true";
-        procesarArchivo(e.target.files[0]);
+    fileInput.addEventListener('change', function(e) {
+        // Evitar doble procesamiento
+        if (this.dataset.procesando === "true") return;
         
-        // Resetear después de 2 segundos para permitir otro archivo
-        setTimeout(() => {
-            this.dataset.procesando = "false";
-            this.value = ''; // Limpiar input
-        }, 2000);
-    }
-});
+        if (e.target.files.length > 0) {
+            this.dataset.procesando = "true";
+            procesarArchivo(e.target.files[0]);
+            
+            // Resetear después de 2 segundos para permitir otro archivo
+            setTimeout(() => {
+                this.dataset.procesando = "false";
+                this.value = ''; // Limpiar input
+            }, 2000);
+        }
+    });
+}  // <-- AGREGAR ESTA LLAVE
 
 // ==========================================
 // PROCESAR ARCHIVO - CORREGIDO (SIN DOBLE CLIC)
