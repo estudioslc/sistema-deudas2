@@ -1,9 +1,10 @@
 // ==========================================
-// SISTEMA LC - CONSULTA Y EDICIÓN
+// SISTEMA LC - CONSULTA
 // ==========================================
 
 let causas = [];
 let causaEditando = null;
+let causaActualDetalle = null;
 
 // ==========================================
 // CARGAR CAUSAS
@@ -60,65 +61,10 @@ async function cargarCausas(filtro = null) {
   }
 }
 
-/**
- * Mostrar causas en tabla
- */
-function mostrarCausas(lista) {
-  const container = document.getElementById('resultados');
-  if (!container) return;
-  
-  if (lista.length === 0) {
-    container.innerHTML = '<div class="info">No se encontraron causas</div>';
-    return;
-  }
-  
-  let html = `
-    <div class="preview">
-      <table>
-        <thead>
-          <tr>
-            <th>Expediente</th>
-            <th>Carátula</th>
-            <th>Deudor</th>
-            <th>Documento</th>
-            <th>Monto</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-  `;
-  
-  lista.forEach(causa => {
-    html += `
-      <tr>
-        <td>${causa.expediente || '-'}</td>
-        <td>${causa.caratula || '-'}</td>
-        <td>${causa.deudor || '-'}</td>
-        <td>${causa.documento || '-'}</td>
-        <td>${formatCurrency(causa.monto)}</td>
-        <td>${createEstadoBadge(causa.estado)}</td>
-        <td>
-          <button onclick="editarCausa(${causa.id})" class="btn btn-sm btn-primario">✏️</button>
-          <button onclick="eliminarCausa(${causa.id})" class="btn btn-sm btn-peligro">🗑️</button>
-        </td>
-      </tr>
-    `;
-  });
-  
-  html += '</tbody></table></div>';
-  html += `<div class="info">Total: ${lista.length} causas</div>`;
-  
-  container.innerHTML = html;
-}
-
 // ==========================================
-// BÚSQUEDA
+// MOSTRAR CAUSAS
 // ==========================================
 
-/**
- * Buscar causas
- */
 /**
  * Mostrar causas en tabla
  */
@@ -173,6 +119,108 @@ function mostrarCausas(lista) {
   html += `<div class="info">Total: ${lista.length} causas</div>`;
   
   container.innerHTML = html;
+}
+
+// ==========================================
+// BÚSQUEDA
+// ==========================================
+
+/**
+ * Buscar causas
+ */
+function buscarCausas() {
+  const termino = document.getElementById('busqueda')?.value?.toLowerCase()?.trim();
+  
+  if (!termino) {
+    mostrarCausas(causas);
+    return;
+  }
+  
+  const filtradas = causas.filter(c => 
+    (c.jud_id && String(c.jud_id).toLowerCase().includes(termino)) ||
+    (c.cuit && String(c.cuit).toLowerCase().includes(termino)) ||
+    (c.expediente && String(c.expediente).toLowerCase().includes(termino)) ||
+    (c.caratula && String(c.caratula).toLowerCase().includes(termino)) ||
+    (c.deudor && String(c.deudor).toLowerCase().includes(termino)) ||
+    (c.documento && String(c.documento).toLowerCase().includes(termino)) ||
+    (c.titular && String(c.titular).toLowerCase().includes(termino))
+  );
+  
+  mostrarCausas(filtradas);
+}
+
+// ==========================================
+// VER DETALLE
+// ==========================================
+
+/**
+ * Abrir modal con detalle completo de la causa
+ */
+function verDetalle(id) {
+  const causa = causas.find(c => c.id === id);
+  if (!causa) return;
+  
+  causaActualDetalle = causa;
+  
+  const campos = [
+    { label: 'ID', valor: causa.id },
+    { label: 'Jud ID', valor: causa.jud_id },
+    { label: 'Expediente', valor: causa.expediente },
+    { label: 'Carátula', valor: causa.caratula },
+    { label: 'Deudor', valor: causa.deudor },
+    { label: 'Titular', valor: causa.titular },
+    { label: 'Documento', valor: causa.documento },
+    { label: 'CUIT', valor: causa.cuit },
+    { label: 'Monto', valor: formatCurrency(causa.monto) },
+    { label: 'Estado', valor: causa.estado },
+    { label: 'Teléfono', valor: causa.telefono || causa.telefono_fusion },
+    { label: 'Email', valor: causa.mail || causa.email_fusion },
+    { label: 'Domicilio', valor: causa.domicilio_postal },
+    { label: 'Observaciones', valor: causa.observaciones || causa.observaciones_fusion },
+    { label: 'Expediente Judicial', valor: causa.expte_judicial },
+    { label: 'Dominio/Objeto', valor: causa.dominio_objeto || causa.identificador },
+    { label: 'Infracción', valor: causa.infraccion },
+    { label: 'Fecha Infracción', valor: causa.fch_infrac },
+    { label: 'Vehículo', valor: causa.vehiculo },
+    { label: 'Creado', valor: causa.created_at ? new Date(causa.created_at).toLocaleString() : '-' },
+    { label: 'Última Actualización', valor: causa.fecha_ultima_actualizacion ? new Date(causa.fecha_ultima_actualizacion).toLocaleString() : '-' }
+  ];
+  
+  let html = '<div class="detalle-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">';
+  
+  campos.forEach(campo => {
+    if (campo.valor) {
+      html += `
+        <div style="padding: 10px; background: #f5f5f5; border-radius: 5px;">
+          <div style="font-size: 12px; color: #666; text-transform: uppercase;">${campo.label}</div>
+          <div style="font-weight: bold; color: #333;">${campo.valor}</div>
+        </div>
+      `;
+    }
+  });
+  
+  html += '</div>';
+  
+  document.getElementById('detalleContenido').innerHTML = html;
+  document.getElementById('modalDetalle').style.display = 'block';
+}
+
+/**
+ * Cerrar modal de detalle
+ */
+function cerrarModalDetalle() {
+  document.getElementById('modalDetalle').style.display = 'none';
+  causaActualDetalle = null;
+}
+
+/**
+ * Editar desde el modal de detalle
+ */
+function editarDesdeDetalle() {
+  if (!causaActualDetalle) return;
+  
+  cerrarModalDetalle();
+  editarCausa(causaActualDetalle.id);
 }
 
 // ==========================================
@@ -329,6 +377,7 @@ function debounce(func, wait) {
     timeout = setTimeout(later, wait);
   };
 }
+
 /**
  * Limpiar TODAS las causas de Supabase
  */
@@ -351,80 +400,4 @@ async function limpiarTodasLasCausas() {
     console.error('Error al limpiar:', err);
     showError('Error al eliminar las causas: ' + err.message);
   }
-}
-
-// ==========================================
-// VER DETALLE
-// ==========================================
-
-let causaActualDetalle = null;
-
-/**
- * Abrir modal con detalle completo de la causa
- */
-function verDetalle(id) {
-  const causa = causas.find(c => c.id === id);
-  if (!causa) return;
-  
-  causaActualDetalle = causa;
-  
-  const campos = [
-    { label: 'ID', valor: causa.id },
-    { label: 'Jud ID', valor: causa.jud_id },
-    { label: 'Expediente', valor: causa.expediente },
-    { label: 'Carátula', valor: causa.caratula },
-    { label: 'Deudor', valor: causa.deudor },
-    { label: 'Titular', valor: causa.titular },
-    { label: 'Documento', valor: causa.documento },
-    { label: 'CUIT', valor: causa.cuit },
-    { label: 'Monto', valor: formatCurrency(causa.monto) },
-    { label: 'Estado', valor: causa.estado },
-    { label: 'Teléfono', valor: causa.telefono || causa.telefono_fusion },
-    { label: 'Email', valor: causa.mail || causa.email_fusion },
-    { label: 'Domicilio', valor: causa.domicilio_postal },
-    { label: 'Observaciones', valor: causa.observaciones || causa.observaciones_fusion },
-    { label: 'Expediente Judicial', valor: causa.expte_judicial },
-    { label: 'Dominio/Objeto', valor: causa.dominio_objeto || causa.identificador },
-    { label: 'Infracción', valor: causa.infraccion },
-    { label: 'Fecha Infracción', valor: causa.fch_infrac },
-    { label: 'Vehículo', valor: causa.vehiculo },
-    { label: 'Creado', valor: causa.created_at ? new Date(causa.created_at).toLocaleString() : '-' },
-    { label: 'Última Actualización', valor: causa.fecha_ultima_actualizacion ? new Date(causa.fecha_ultima_actualizacion).toLocaleString() : '-' }
-  ];
-  
-  let html = '<div class="detalle-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">';
-  
-  campos.forEach(campo => {
-    if (campo.valor) {
-      html += `
-        <div style="padding: 10px; background: #f5f5f5; border-radius: 5px;">
-          <div style="font-size: 12px; color: #666; text-transform: uppercase;">${campo.label}</div>
-          <div style="font-weight: bold; color: #333;">${campo.valor}</div>
-        </div>
-      `;
-    }
-  });
-  
-  html += '</div>';
-  
-  document.getElementById('detalleContenido').innerHTML = html;
-  document.getElementById('modalDetalle').style.display = 'block';
-}
-
-/**
- * Cerrar modal de detalle
- */
-function cerrarModalDetalle() {
-  document.getElementById('modalDetalle').style.display = 'none';
-  causaActualDetalle = null;
-}
-
-/**
- * Editar desde el modal de detalle
- */
-function editarDesdeDetalle() {
-  if (!causaActualDetalle) return;
-  
-  cerrarModalDetalle();
-  editarCausa(causaActualDetalle.id);
 }
