@@ -199,11 +199,16 @@ function cerrarModalDetalle() {
 
 function editarDesdeDetalle() {
   if (!causaActualDetalle) return;
-  cerrarModalDetalle();
-  // Pequeño delay para que el modal cierre antes de abrir el otro
+  const idGuardado = causaActualDetalle.id;
+  
+  // Cerrar modal detalle manualmente sin usar la función
+  document.getElementById('modalDetalle').style.display = 'none';
+  causaActualDetalle = null;
+  
+  // Abrir modal edición con delay suficiente
   setTimeout(() => {
-    editarCausa(causaActualDetalle.id);
-  }, 200);
+    editarCausa(idGuardado);
+  }, 300);
 }
 
 // ==========================================
@@ -321,8 +326,14 @@ document.addEventListener('DOMContentLoaded', () => {
   window.onclick = function(event) {
     const modalEdicion = document.getElementById('modalEdicion');
     const modalDetalle = document.getElementById('modalDetalle');
-    if (event.target === modalEdicion) cerrarModal();
-    if (event.target === modalDetalle) cerrarModalDetalle();
+    
+    // Solo cerrar si el modal está visible Y se clickeó el fondo
+    if (modalEdicion && modalEdicion.style.display === 'block' && event.target === modalEdicion) {
+      cerrarModal();
+    }
+    if (modalDetalle && modalDetalle.style.display === 'block' && event.target === modalDetalle) {
+      cerrarModalDetalle();
+    }
   };
 });
 
