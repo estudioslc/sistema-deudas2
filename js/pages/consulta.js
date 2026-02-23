@@ -109,7 +109,7 @@ function mostrarCausas(lista) {
         <td>${formatCurrency(causa.monto)}</td>
         <td>${createEstadoBadge(causa.estado)}</td>
         <td>
-          <button onclick="verDetalle(${causa.id})" class="btn btn-sm btn-primario">👁️ Ver</button>
+          <button onclick="window.verDetalle(${causa.id})" class="btn btn-sm btn-primario">👁️ Ver</button>
         </td>
       </tr>
     `;
