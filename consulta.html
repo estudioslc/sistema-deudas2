@@ -12,7 +12,6 @@
   <link rel="stylesheet" href="css/styles-internal.css">
   
   <style>
-    /* Estilos específicos para el modal */
     .modal {
       display: none;
       position: fixed;
@@ -131,9 +130,6 @@
         <button onclick="filtrarPorEstado('P')" class="btn btn-sm">Pagadas</button>
         <button onclick="filtrarPorEstado('B')" class="btn btn-sm">Baja</button>
         <button onclick="limpiarTodasLasCausas()" class="btn btn-peligro" style="margin-left: 20px;">🗑️ Limpiar Todo</button>
-        <button onclick="limpiarTodasLasCausas()" class="btn btn-peligro" style="margin-left: 20px;">
-  🗑️ Limpiar Todo
-</button>
       </div>
     </div>
     
@@ -200,8 +196,17 @@
           <label for="editObservaciones">Observaciones</label>
           <textarea id="editObservaciones"></textarea>
         </div>
-        
-          <!-- Modal de Ver Detalle -->
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+          <button type="button" onclick="cerrarModal()" class="btn btn-secundario">Cancelar</button>
+          <button type="submit" class="btn btn-primario">💾 Guardar</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de Ver Detalle -->
   <div id="modalDetalle" class="modal">
     <div class="modal-content" style="max-width: 800px;">
       <div class="modal-header">
@@ -210,7 +215,6 @@
       </div>
       
       <div id="detalleContenido">
-        <!-- Se llena dinámicamente -->
       </div>
       
       <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
@@ -224,7 +228,6 @@
     © 2025 Estudio LC - Sistema de Gestión de Deudas
   </footer>
 
-  <!-- Scripts -->
   <script src="js/main.js"></script>
   <script src="js/pages/consulta.js"></script>
 </body>
