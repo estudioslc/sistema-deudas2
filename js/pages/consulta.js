@@ -200,7 +200,10 @@ function cerrarModalDetalle() {
 function editarDesdeDetalle() {
   if (!causaActualDetalle) return;
   cerrarModalDetalle();
-  editarCausa(causaActualDetalle.id);
+  // Pequeño delay para que el modal cierre antes de abrir el otro
+  setTimeout(() => {
+    editarCausa(causaActualDetalle.id);
+  }, 200);
 }
 
 // ==========================================
@@ -208,19 +211,24 @@ function editarDesdeDetalle() {
 // ==========================================
 
 function editarCausa(id) {
-  const causa = causas.find(c => c.id === id);
-  if (!causa) return;
+  // Convertir a número por si viene como string
+  const idNum = Number(id);
+  const causa = causas.find(c => Number(c.id) === idNum);
+  if (!causa) {
+    console.error('No se encontró la causa con id:', id);
+    return;
+  }
   
   causaEditando = causa;
   
   document.getElementById('editId').value = causa.id;
   document.getElementById('editExpediente').value = causa.expediente || '';
   document.getElementById('editCaratula').value = causa.caratula || '';
-  document.getElementById('editDeudor').value = causa.deudor || '';
-  document.getElementById('editDocumento').value = causa.documento || '';
+  document.getElementById('editDeudor').value = causa.deudor || causa.titular || '';
+  document.getElementById('editDocumento').value = causa.documento || causa.cuit || '';
   document.getElementById('editMonto').value = causa.monto || '';
   document.getElementById('editEstado').value = causa.estado || 'X';
-  document.getElementById('editObservaciones').value = causa.observaciones || '';
+  document.getElementById('editObservaciones').value = causa.observaciones || causa.observaciones_fusion || '';
   
   document.getElementById('modalEdicion').style.display = 'block';
 }
