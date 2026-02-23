@@ -106,7 +106,7 @@
     <nav class="nav">
       <a href="index.html">🏠 Inicio</a>
       <a href="carga.html">📤 Carga Masiva</a>
-      <a href="consulta.html" class="active">🔍 Consulta y Edición</a>
+      <a href="consulta.html" class="active">🔍 Consulta</a>
       <a href="admin.html">⚙️ Administración</a>
     </nav>
   </header>
@@ -116,7 +116,7 @@
     
     <div class="card">
       <div class="search-box">
-        <input type="text" id="busqueda" placeholder="🔍 Buscar por expediente, carátula, deudor o documento...">
+        <input type="text" id="busqueda" placeholder="🔍 Buscar por Jud ID, expediente, carátula, deudor, documento o CUIT...">
         <button onclick="buscarCausas()">Buscar</button>
       </div>
       
@@ -201,11 +201,22 @@
           <textarea id="editObservaciones"></textarea>
         </div>
         
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button type="button" onclick="cerrarModal()" class="btn btn-secundario">Cancelar</button>
-          <button type="submit" class="btn btn-primario">💾 Guardar Cambios</button>
-        </div>
-      </form>
+          <!-- Modal de Ver Detalle -->
+  <div id="modalDetalle" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2>📋 Detalle de la Causa</h2>
+        <span class="close" onclick="cerrarModalDetalle()">&times;</span>
+      </div>
+      
+      <div id="detalleContenido">
+        <!-- Se llena dinámicamente -->
+      </div>
+      
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+        <button onclick="cerrarModalDetalle()" class="btn btn-secundario">Cerrar</button>
+        <button onclick="editarDesdeDetalle()" class="btn btn-primario">✏️ Editar</button>
+      </div>
     </div>
   </div>
 
