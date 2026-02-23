@@ -10,18 +10,14 @@ let causaActualDetalle = null;
 // CARGAR CAUSAS
 // ==========================================
 
-/**
- * Cargar causas desde Supabase
- */
 async function cargarCausas(filtro = null) {
   const container = document.getElementById('resultados');
   if (!container) return;
-    if (!supabaseClient) initSupabase();
+  if (!supabaseClient) initSupabase();
   
   showLoading('resultados', 'Cargando causas...');
   
   try {
-    // Verificar conexión primero
     const { data: testData, error: testError } = await supabaseClient
       .from('deudas')
       .select('id')
@@ -65,9 +61,6 @@ async function cargarCausas(filtro = null) {
 // MOSTRAR CAUSAS
 // ==========================================
 
-/**
- * Mostrar causas en tabla
- */
 function mostrarCausas(lista) {
   const container = document.getElementById('resultados');
   if (!container) return;
@@ -109,7 +102,7 @@ function mostrarCausas(lista) {
         <td>${formatCurrency(causa.monto)}</td>
         <td>${createEstadoBadge(causa.estado)}</td>
         <td>
-          <button onclick="window.verDetalle(${causa.id})" class="btn btn-sm btn-primario">👁️ Ver</button>
+          <button onclick="verDetalle(${causa.id})" class="btn btn-sm btn-primario">👁️ Ver</button>
         </td>
       </tr>
     `;
@@ -125,9 +118,6 @@ function mostrarCausas(lista) {
 // BÚSQUEDA
 // ==========================================
 
-/**
- * Buscar causas
- */
 function buscarCausas() {
   const termino = document.getElementById('busqueda')?.value?.toLowerCase()?.trim();
   
@@ -153,9 +143,6 @@ function buscarCausas() {
 // VER DETALLE
 // ==========================================
 
-/**
- * Abrir modal con detalle completo de la causa
- */
 function verDetalle(id) {
   const causa = causas.find(c => c.id === id);
   if (!causa) return;
@@ -205,20 +192,13 @@ function verDetalle(id) {
   document.getElementById('modalDetalle').style.display = 'block';
 }
 
-/**
- * Cerrar modal de detalle
- */
 function cerrarModalDetalle() {
   document.getElementById('modalDetalle').style.display = 'none';
   causaActualDetalle = null;
 }
 
-/**
- * Editar desde el modal de detalle
- */
 function editarDesdeDetalle() {
   if (!causaActualDetalle) return;
-  
   cerrarModalDetalle();
   editarCausa(causaActualDetalle.id);
 }
@@ -227,16 +207,12 @@ function editarDesdeDetalle() {
 // EDICIÓN
 // ==========================================
 
-/**
- * Abrir modal para editar causa
- */
 function editarCausa(id) {
   const causa = causas.find(c => c.id === id);
   if (!causa) return;
   
   causaEditando = causa;
   
-  // Llenar formulario
   document.getElementById('editId').value = causa.id;
   document.getElementById('editExpediente').value = causa.expediente || '';
   document.getElementById('editCaratula').value = causa.caratula || '';
@@ -246,13 +222,9 @@ function editarCausa(id) {
   document.getElementById('editEstado').value = causa.estado || 'X';
   document.getElementById('editObservaciones').value = causa.observaciones || '';
   
-  // Mostrar modal
   document.getElementById('modalEdicion').style.display = 'block';
 }
 
-/**
- * Guardar cambios de edición
- */
 async function guardarEdicion() {
   if (!causaEditando) return;
   
@@ -285,9 +257,6 @@ async function guardarEdicion() {
   }
 }
 
-/**
- * Cerrar modal
- */
 function cerrarModal() {
   document.getElementById('modalEdicion').style.display = 'none';
   causaEditando = null;
@@ -297,9 +266,6 @@ function cerrarModal() {
 // ELIMINACIÓN
 // ==========================================
 
-/**
- * Eliminar causa
- */
 async function eliminarCausa(id) {
   if (!confirm('¿Estás seguro de eliminar esta causa?')) return;
   
@@ -324,9 +290,6 @@ async function eliminarCausa(id) {
 // FILTROS
 // ==========================================
 
-/**
- * Filtrar por estado
- */
 function filtrarPorEstado(estado) {
   if (!supabaseClient) initSupabase();
   cargarCausas(estado);
@@ -337,35 +300,28 @@ function filtrarPorEstado(estado) {
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Verificar si hay filtro en URL
   const params = new URLSearchParams(window.location.search);
   const filtro = params.get('filtro');
   
-  // Cargar causas
   cargarCausas(filtro);
   
-  // Configurar búsqueda
   const inputBusqueda = document.getElementById('busqueda');
   if (inputBusqueda) {
     inputBusqueda.addEventListener('input', debounce(buscarCausas, 300));
   }
   
-  // Cerrar modal al hacer click fuera
   window.onclick = function(event) {
     const modalEdicion = document.getElementById('modalEdicion');
     const modalDetalle = document.getElementById('modalDetalle');
-    if (event.target === modalEdicion) {
-      cerrarModal();
-    }
-    if (event.target === modalDetalle) {
-      cerrarModalDetalle();
-    }
+    if (event.target === modalEdicion) cerrarModal();
+    if (event.target === modalDetalle) cerrarModalDetalle();
   };
 });
 
-/**
- * Debounce para búsqueda
- */
+// ==========================================
+// UTILIDADES
+// ==========================================
+
 function debounce(func, wait) {
   let timeout;
   return function executedFunction(...args) {
@@ -378,9 +334,6 @@ function debounce(func, wait) {
   };
 }
 
-/**
- * Limpiar TODAS las causas de Supabase
- */
 async function limpiarTodasLasCausas() {
   if (!confirm('¿ESTÁS SEGURO de eliminar TODAS las causas? Esta acción no se puede deshacer.')) return;
   
@@ -401,3 +354,18 @@ async function limpiarTodasLasCausas() {
     showError('Error al eliminar las causas: ' + err.message);
   }
 }
+
+// ==========================================
+// EXPONER FUNCIONES AL SCOPE GLOBAL
+// ==========================================
+
+window.verDetalle = verDetalle;
+window.buscarCausas = buscarCausas;
+window.filtrarPorEstado = filtrarPorEstado;
+window.cerrarModal = cerrarModal;
+window.cerrarModalDetalle = cerrarModalDetalle;
+window.editarDesdeDetalle = editarDesdeDetalle;
+window.guardarEdicion = guardarEdicion;
+window.limpiarTodasLasCausas = limpiarTodasLasCausas;
+window.editarCausa = editarCausa;
+window.eliminarCausa = eliminarCausa;
