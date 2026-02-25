@@ -426,9 +426,13 @@ function mostrarFormNuevo() {
   const textarea = document.getElementById('textoNuevoMovimiento');
   
   if (form && fechaEl) {
-    // Fecha automática
+    // Fecha automática - formato correcto DD/MM/YYYY
     const hoy = new Date();
-    const fechaFormateada = hoy.toLocaleDateString('es-AR');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const anio = hoy.getFullYear();
+    const fechaFormateada = `${dia}/${mes}/${anio}`;
+    
     fechaEl.textContent = fechaFormateada;
     
     // Limpiar textarea
@@ -459,7 +463,7 @@ async function guardarNuevoMovimiento() {
     return;
   }
   
-  const fecha = fechaEl.textContent;
+  const fecha = fechaEl.textContent; // Ya está en formato DD/MM/YYYY
   const usuario = 'Lucia'; // Podés cambiar esto o hacerlo dinámico
   
   // Crear nuevo registro
@@ -468,8 +472,7 @@ async function guardarNuevoMovimiento() {
   // Obtener valor actual
   let valorActual = causaActualDetalle.observaciones_fusion || '';
   
-  // Agregar nuevo registro (al principio o al final, según prefieras)
-  // Voy a agregar al final para mantener orden cronológico
+  // Agregar nuevo registro al final
   const nuevoValor = valorActual ? `${valorActual}${nuevoRegistro}/` : `${nuevoRegistro}/`;
   
   try {
