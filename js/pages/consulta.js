@@ -180,7 +180,7 @@ function verDetalle(id) {
 }
 
 function llenarResumen(causa) {
-  // Procurador (por ahora hardcodeado o podés agregarlo a la BD)
+  // Procurador
   const procuradorEl = document.getElementById('resumenProcurador');
   if (procuradorEl) {
     procuradorEl.textContent = 'Procurador: Lucia Mercedes';
@@ -195,9 +195,6 @@ function llenarResumen(causa) {
   const estadoNombre = NOMBRES_ESTADO[causa.estado] || causa.estado || '-';
   const monto = formatCurrency(causa.monto);
   const expediente = causa.expediente || '-';
-  const ordenAnio = causa.causa || causa.orden_ano || '-';
-  const expteJudicial = causa.expte_judicial || '-';
-  const dominio = causa.dominio_objeto || causa.identificador || '-';
   
   grid.innerHTML = `
     <div class="resumen-item">
@@ -221,16 +218,8 @@ function llenarResumen(causa) {
       <span class="resumen-value">${doc}</span>
     </div>
     <div class="resumen-item">
-      <span class="resumen-label">Orden/Año</span>
-      <span class="resumen-value">${ordenAnio}</span>
-    </div>
-    <div class="resumen-item">
-      <span class="resumen-label">Expte. Judicial</span>
-      <span class="resumen-value">${expteJudicial}</span>
-    </div>
-    <div class="resumen-item">
-      <span class="resumen-label">Dominio/Objeto</span>
-      <span class="resumen-value">${dominio}</span>
+      <span class="resumen-label">Expediente</span>
+      <span class="resumen-value">${expediente}</span>
     </div>
   `;
 }
