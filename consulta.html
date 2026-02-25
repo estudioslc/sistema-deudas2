@@ -70,8 +70,9 @@
     
     .detalle-resumen-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 15px;
+      padding-right: 50px; /* Espacio para el botón + */
     }
     
     .resumen-item {
@@ -88,9 +89,10 @@
     }
     
     .resumen-value {
-      font-size: 14px;
+      font-size: 13px;
       color: #333;
       font-weight: 600;
+      word-break: break-word;
     }
     
     .resumen-procurador {
