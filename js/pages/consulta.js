@@ -426,12 +426,12 @@ function mostrarFormNuevo() {
   const textarea = document.getElementById('textoNuevoMovimiento');
   
   if (form && fechaEl) {
-    // Fecha automática - formato correcto DD/MM/YYYY
+    // Fecha automática - formato DD/MM/YYYY
     const hoy = new Date();
     const dia = String(hoy.getDate()).padStart(2, '0');
     const mes = String(hoy.getMonth() + 1).padStart(2, '0');
     const anio = hoy.getFullYear();
-    const fechaFormateada = `${dia}/${mes}/${anio}`;
+    const fechaFormateada = dia + '/' + mes + '/' + anio;
     
     fechaEl.textContent = fechaFormateada;
     
@@ -442,6 +442,91 @@ function mostrarFormNuevo() {
     form.classList.add('visible');
     if (textarea) textarea.focus();
   }
+}
+
+async function guardarNuevoMovimiento() {
+  const textarea = document.getElementById('textoNuevoMovimiento');
+  const fechaEl = document.getElementById('fechaActual');
+  
+  if (!textarea || !fechaEl || !causaActualDetalle) return;
+  
+  const texto = textarea.value.trim();
+  if (!texto) {
+    alert('Por favor escribe una observación');
+    return;
+  }
+  
+  const fecha = fechaEl.textContent;
+  const usuario = 'Lucia';
+  
+  // Crear nuevo registro con formato correcto
+  const nuevoRegistro = fecha + '##' + texto + '##' + usuario + '/';
+  
+  // Obtener valor actual (limpiar si es null o undefined)
+  let valorActual = causaActualDetalle.observaciones_fusion || '';
+  
+  // Agregar nuevo registro
+  const nuevoValor = valorActual + nuevoRegistro;
+  
+  try {
+    const { error } = await supabaseClient
+      .from('deudas')
+      .update({ observaciones_fusion: nuevoValor })
+      .eq('id', causaActualDetalle.id);
+    
+    if (error) throw error;
+    
+    // Actualizar objeto local
+    causaActualDetalle.observaciones_fusion = nuevoValor;
+    
+    // Ocultar formulario
+    cancelarNuevo();
+    
+    // Recargar movimientos
+    cargarMovimientos();
+    
+    showSuccess('Movimiento guardado correctamente');
+    
+  } catch (err) {
+    console.error('Error al guardar:', err);
+    showError('Error al guardar el movimiento: ' + err.message);
+  }
+}
+
+function parsearMovimientos(texto) {
+  if (!texto || texto.trim() === '') return [];
+  
+  const movimientos = [];
+  
+  // Si el texto no tiene el formato nuevo (##), tratarlo como observación antigua
+  if (!texto.includes('##')) {
+    const hoy = new Date();
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const anio = hoy.getFullYear();
+    return [{
+      fecha: dia + '/' + mes + '/' + anio,
+      texto: texto,
+      usuario: 'Histórico',
+      index: 0
+    }];
+  }
+  
+  // Dividir por "/" para separar movimientos
+  const partes = texto.split('/').filter(function(p) { return p.trim() !== ''; });
+  
+  partes.forEach(function(parte, index) {
+    const datos = parte.split('##');
+    movimientos.push({
+      fecha: datos[0] || '-',
+      texto: datos[1] || parte,
+      usuario: datos[2] || 'Sistema',
+      index: index
+    });
+  });
+  
+  // Ordenar por fecha descendente (más reciente primero)
+  return movimientos.reverse();
 }
 
 function cancelarNuevo() {
