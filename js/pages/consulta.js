@@ -1,10 +1,12 @@
 // ==========================================
-// SISTEMA LC - CONSULTA
+// SISTEMA LC - CONSULTA (NUEVO CON MODAL REDISEÑADO)
 // ==========================================
 
 let causas = [];
 let causaEditando = null;
 let causaActualDetalle = null;
+let tabActual = 'extrajudicial';
+let movimientosMostrados = 5; // Cantidad inicial de movimientos a mostrar
 
 // ==========================================
 // CARGAR CAUSAS
@@ -140,7 +142,7 @@ function buscarCausas() {
 }
 
 // ==========================================
-// VER DETALLE
+// VER DETALLE (NUEVO MODAL REDISEÑADO)
 // ==========================================
 
 function verDetalle(id) {
@@ -148,7 +150,96 @@ function verDetalle(id) {
   if (!causa) return;
   
   causaActualDetalle = causa;
+  movimientosMostrados = 5; // Resetear contador
   
+  // Llenar resumen (sección verde)
+  llenarResumen(causa);
+  
+  // Llenar datos completos (sección expandible)
+  llenarDatosCompletos(causa);
+  
+  // Resetear estado del expandible
+  const detalleCompleto = document.getElementById('detalleCompleto');
+  const btnExpandir = document.querySelector('.btn-expandir');
+  if (detalleCompleto) {
+    detalleCompleto.classList.remove('expandido');
+  }
+  if (btnExpandir) {
+    btnExpandir.classList.remove('expandido');
+    btnExpandir.innerHTML = '+';
+  }
+  
+  // Cargar movimientos de la pestaña activa
+  cargarMovimientos();
+  
+  // Mostrar modal
+  const modal = document.getElementById('modalDetalle');
+  if (modal) {
+    modal.style.display = 'block';
+  }
+}
+
+function llenarResumen(causa) {
+  // Procurador (por ahora hardcodeado o podés agregarlo a la BD)
+  const procuradorEl = document.getElementById('resumenProcurador');
+  if (procuradorEl) {
+    procuradorEl.textContent = 'Procurador: Lucia Mercedes';
+  }
+  
+  // Grid de resumen
+  const grid = document.getElementById('resumenGrid');
+  if (!grid) return;
+  
+  const nombre = causa.titular || causa.deudor || '-';
+  const doc = causa.cuit || causa.documento || '-';
+  const estadoNombre = NOMBRES_ESTADO[causa.estado] || causa.estado || '-';
+  const monto = formatCurrency(causa.monto);
+  const expediente = causa.expediente || '-';
+  const ordenAnio = causa.causa || causa.orden_ano || '-';
+  const expteJudicial = causa.expte_judicial || '-';
+  const dominio = causa.dominio_objeto || causa.identificador || '-';
+  
+  grid.innerHTML = `
+    <div class="resumen-item">
+      <span class="resumen-label">Titular</span>
+      <span class="resumen-value">${nombre}</span>
+    </div>
+    <div class="resumen-item">
+      <span class="resumen-label">Jud Id</span>
+      <span class="resumen-value">${causa.jud_id || '-'}</span>
+    </div>
+    <div class="resumen-item">
+      <span class="resumen-label">Instancia</span>
+      <span class="resumen-value">${estadoNombre}</span>
+    </div>
+    <div class="resumen-item">
+      <span class="resumen-label">Monto deuda</span>
+      <span class="resumen-value">${monto}</span>
+    </div>
+    <div class="resumen-item">
+      <span class="resumen-label">Cuit</span>
+      <span class="resumen-value">${doc}</span>
+    </div>
+    <div class="resumen-item">
+      <span class="resumen-label">Orden/Año</span>
+      <span class="resumen-value">${ordenAnio}</span>
+    </div>
+    <div class="resumen-item">
+      <span class="resumen-label">Expte. Judicial</span>
+      <span class="resumen-value">${expteJudicial}</span>
+    </div>
+    <div class="resumen-item">
+      <span class="resumen-label">Dominio/Objeto</span>
+      <span class="resumen-value">${dominio}</span>
+    </div>
+  `;
+}
+
+function llenarDatosCompletos(causa) {
+  const contenedor = document.getElementById('detalleCompletoContenido');
+  if (!contenedor) return;
+  
+  // Lista de todos los campos disponibles
   const campos = [
     { label: 'ID', valor: causa.id },
     { label: 'Jud ID', valor: causa.jud_id },
@@ -162,61 +253,402 @@ function verDetalle(id) {
     { label: 'Estado', valor: causa.estado },
     { label: 'Teléfono', valor: causa.telefono || causa.telefono_fusion },
     { label: 'Email', valor: causa.mail || causa.email_fusion },
-    { label: 'Domicilio', valor: causa.domicilio_postal },
-    { label: 'Observaciones', valor: causa.observaciones || causa.observaciones_fusion },
+    { label: 'Domicilio Postal', valor: causa.domicilio_postal },
+    { label: 'Domicilio Inmueble', valor: causa.domicilio_inmueble },
+    { label: 'Barrio Inmueble', valor: causa.barrio_inmueble },
+    { label: 'Domicilio Juzgado', valor: causa.domicilio_juzgado },
+    { label: 'Observaciones', valor: causa.observaciones },
+    { label: 'Observaciones Fusión', valor: causa.observaciones_fusion },
     { label: 'Expediente Judicial', valor: causa.expte_judicial },
     { label: 'Dominio/Objeto', valor: causa.dominio_objeto || causa.identificador },
     { label: 'Infracción', valor: causa.infraccion },
     { label: 'Fecha Infracción', valor: causa.fch_infrac },
+    { label: 'Hora Infracción', valor: causa.hora_infrac },
     { label: 'Vehículo', valor: causa.vehiculo },
+    { label: 'Causa', valor: causa.causa },
+    { label: 'Objeto ID', valor: causa.obj_id },
+    { label: 'Tipo Objeto', valor: causa.tipo_obj },
+    { label: 'Régimen', valor: causa.regimen },
+    { label: 'Año Fabricación', valor: causa.anio_fab },
+    { label: 'Valor Rodado', valor: causa.valor_rodado },
+    { label: 'Carpeta', valor: causa.carpeta },
+    { label: 'Notas Seguimiento', valor: causa.notas_seguimiento },
     { label: 'Creado', valor: causa.created_at ? new Date(causa.created_at).toLocaleString() : '-' },
     { label: 'Última Actualización', valor: causa.fecha_ultima_actualizacion ? new Date(causa.fecha_ultima_actualizacion).toLocaleString() : '-' }
   ];
   
-  let html = '<div class="detalle-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">';
-  
+  let html = '';
   campos.forEach(campo => {
-    if (campo.valor) {
+    if (campo.valor && campo.valor !== '-' && campo.valor !== '$ 0,00') {
       html += `
-        <div style="padding: 10px; background: #f5f5f5; border-radius: 5px;">
-          <div style="font-size: 12px; color: #666; text-transform: uppercase;">${campo.label}</div>
-          <div style="font-weight: bold; color: #333;">${campo.valor}</div>
+        <div class="campo-completo">
+          <div class="campo-completo-label">${campo.label}</div>
+          <div class="campo-completo-value">${campo.valor}</div>
         </div>
       `;
     }
   });
   
-  html += '</div>';
-  
-  document.getElementById('detalleContenido').innerHTML = html;
-  document.getElementById('modalDetalle').style.display = 'block';
+  contenedor.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #999;">No hay datos adicionales</div>';
 }
 
+function toggleExpandirDetalle() {
+  const detalleCompleto = document.getElementById('detalleCompleto');
+  const btnExpandir = document.querySelector('.btn-expandir');
+  
+  if (detalleCompleto && btnExpandir) {
+    const estaExpandido = detalleCompleto.classList.contains('expandido');
+    
+    if (estaExpandido) {
+      detalleCompleto.classList.remove('expandido');
+      btnExpandir.classList.remove('expandido');
+      btnExpandir.innerHTML = '+';
+      btnExpandir.title = 'Ver todos los datos';
+    } else {
+      detalleCompleto.classList.add('expandido');
+      btnExpandir.classList.add('expandido');
+      btnExpandir.innerHTML = '−';
+      btnExpandir.title = 'Ocultar datos';
+    }
+  }
+}
+
+// ==========================================
+// TABS Y MOVIMIENTOS
+// ==========================================
+
+function cambiarTab(tab) {
+  tabActual = tab;
+  
+  // Actualizar botones
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('activo');
+  });
+  event.target.classList.add('activo');
+  
+  // Recargar movimientos
+  movimientosMostrados = 5;
+  cargarMovimientos();
+}
+
+function cargarMovimientos() {
+  const timeline = document.getElementById('timelineMovimientos');
+  if (!timeline || !causaActualDetalle) return;
+  
+  // Por ahora solo trabajamos con observaciones_fusion
+  // En el futuro, cada tab usará su propia columna
+  let observaciones = '';
+  
+  switch(tabActual) {
+    case 'extrajudicial':
+      observaciones = causaActualDetalle.observaciones_fusion || '';
+      break;
+    case 'wsp':
+      // observaciones = causaActualDetalle.mensajes_wsp || '';
+      observaciones = ''; // Por ahora vacío hasta crear columna
+      break;
+    case 'mail':
+      // observaciones = causaActualDetalle.mensajes_mail || '';
+      observaciones = ''; // Por ahora vacío hasta crear columna
+      break;
+    case 'expte':
+      // observaciones = causaActualDetalle.mov_expte || '';
+      observaciones = ''; // Por ahora vacío hasta crear columna
+      break;
+    case 'mas':
+      observaciones = causaActualDetalle.observaciones || '';
+      break;
+  }
+  
+  if (!observaciones || observaciones.trim() === '') {
+    timeline.innerHTML = '<div class="sin-movimientos">No hay movimientos registrados</div>';
+    return;
+  }
+  
+  // Parsear movimientos (formato: fecha##texto##usuario/otra_fecha##otro_texto##otro_usuario/)
+  const movimientos = parsearMovimientos(observaciones);
+  
+  // Mostrar solo los últimos N movimientos
+  const movimientosAMostrar = movimientos.slice(0, movimientosMostrados);
+  
+  let html = '';
+  movimientosAMostrar.forEach((mov, index) => {
+    html += crearHtmlMovimiento(mov, index);
+  });
+  
+  timeline.innerHTML = html;
+}
+
+function parsearMovimientos(texto) {
+  if (!texto) return [];
+  
+  const movimientos = [];
+  const partes = texto.split('/').filter(p => p.trim() !== '');
+  
+  partes.forEach((parte, index) => {
+    const datos = parte.split('##');
+    movimientos.push({
+      fecha: datos[0] || '',
+      texto: datos[1] || '',
+      usuario: datos[2] || 'Sistema',
+      index: index
+    });
+  });
+  
+  // Ordenar por fecha descendente (más reciente primero)
+  return movimientos.reverse();
+}
+
+function crearHtmlMovimiento(mov, index) {
+  return `
+    <div class="movimiento-item" data-index="${mov.index}">
+      <div class="movimiento-header">
+        <span class="movimiento-fecha">${mov.fecha}</span>
+        <div class="movimiento-acciones">
+          <button class="btn-icono btn-editar" onclick="editarMovimiento(${mov.index})" title="Editar">✏️</button>
+          <button class="btn-icono btn-eliminar" onclick="eliminarMovimiento(${mov.index})" title="Eliminar">🗑️</button>
+        </div>
+      </div>
+      <div class="movimiento-texto" id="texto-mov-${mov.index}">${mov.texto}</div>
+    </div>
+  `;
+}
+
+// ==========================================
+// NUEVO MOVIMIENTO
+// ==========================================
+
+function mostrarFormNuevo() {
+  const form = document.getElementById('formNuevoMovimiento');
+  const fechaEl = document.getElementById('fechaActual');
+  const textarea = document.getElementById('textoNuevoMovimiento');
+  
+  if (form && fechaEl) {
+    // Fecha automática
+    const hoy = new Date();
+    const fechaFormateada = hoy.toLocaleDateString('es-AR');
+    fechaEl.textContent = fechaFormateada;
+    
+    // Limpiar textarea
+    if (textarea) textarea.value = '';
+    
+    // Mostrar formulario
+    form.classList.add('visible');
+    if (textarea) textarea.focus();
+  }
+}
+
+function cancelarNuevo() {
+  const form = document.getElementById('formNuevoMovimiento');
+  if (form) {
+    form.classList.remove('visible');
+  }
+}
+
+async function guardarNuevoMovimiento() {
+  const textarea = document.getElementById('textoNuevoMovimiento');
+  const fechaEl = document.getElementById('fechaActual');
+  
+  if (!textarea || !fechaEl || !causaActualDetalle) return;
+  
+  const texto = textarea.value.trim();
+  if (!texto) {
+    alert('Por favor escribe una observación');
+    return;
+  }
+  
+  const fecha = fechaEl.textContent;
+  const usuario = 'Lucia'; // Podés cambiar esto o hacerlo dinámico
+  
+  // Crear nuevo registro
+  const nuevoRegistro = `${fecha}##${texto}##${usuario}`;
+  
+  // Obtener valor actual
+  let valorActual = causaActualDetalle.observaciones_fusion || '';
+  
+  // Agregar nuevo registro (al principio o al final, según prefieras)
+  // Voy a agregar al final para mantener orden cronológico
+  const nuevoValor = valorActual ? `${valorActual}${nuevoRegistro}/` : `${nuevoRegistro}/`;
+  
+  try {
+    const { error } = await supabaseClient
+      .from('deudas')
+      .update({ observaciones_fusion: nuevoValor })
+      .eq('id', causaActualDetalle.id);
+    
+    if (error) throw error;
+    
+    // Actualizar objeto local
+    causaActualDetalle.observaciones_fusion = nuevoValor;
+    
+    // Ocultar formulario
+    cancelarNuevo();
+    
+    // Recargar movimientos
+    cargarMovimientos();
+    
+    showSuccess('Movimiento guardado correctamente');
+    
+  } catch (err) {
+    console.error('Error al guardar:', err);
+    showError('Error al guardar el movimiento: ' + err.message);
+  }
+}
+
+// ==========================================
+// EDITAR Y ELIMINAR MOVIMIENTOS
+// ==========================================
+
+function editarMovimiento(index) {
+  const movimientoItem = document.querySelector(`.movimiento-item[data-index="${index}"]`);
+  if (!movimientoItem) return;
+  
+  const textoDiv = movimientoItem.querySelector('.movimiento-texto');
+  const accionesDiv = movimientoItem.querySelector('.movimiento-acciones');
+  
+  if (!textoDiv || !accionesDiv) return;
+  
+  const textoActual = textoDiv.textContent;
+  
+  // Reemplazar por textarea
+  textoDiv.innerHTML = `<textarea class="movimiento-texto-edit" id="edit-mov-${index}">${textoActual}</textarea>`;
+  
+  // Cambiar botones
+  accionesDiv.innerHTML = `
+    <button class="btn-icono btn-guardar-edicion" onclick="guardarEdicionMovimiento(${index})" title="Guardar">💾</button>
+    <button class="btn-icono btn-cancelar" onclick="cancelarEdicionMovimiento(${index}, '${textoActual.replace(/'/g, "\\'")}')" title="Cancelar">❌</button>
+  `;
+}
+
+function cancelarEdicionMovimiento(index, textoOriginal) {
+  cargarMovimientos(); // Recarga todo, más simple
+}
+
+async function guardarEdicionMovimiento(index) {
+  const textarea = document.getElementById(`edit-mov-${index}`);
+  if (!textarea || !causaActualDetalle) return;
+  
+  const nuevoTexto = textarea.value.trim();
+  
+  // Parsear movimientos actuales
+  let observaciones = causaActualDetalle.observaciones_fusion || '';
+  const movimientos = parsearMovimientos(observaciones);
+  
+  // Encontrar y actualizar el movimiento correcto
+  // Como reverseamos en parsear, necesitamos encontrar el índice original
+  const movimientoAEditar = movimientos.find(m => m.index === index);
+  if (!movimientoAEditar) {
+    showError('No se encontró el movimiento a editar');
+    return;
+  }
+  
+  movimientoAEditar.texto = nuevoTexto;
+  
+  // Reconstruir el string
+  const nuevoValor = movimientos.reverse().map(m => `${m.fecha}##${m.texto}##${m.usuario}`).join('/') + '/';
+  
+  try {
+    const { error } = await supabaseClient
+      .from('deudas')
+      .update({ observaciones_fusion: nuevoValor })
+      .eq('id', causaActualDetalle.id);
+    
+    if (error) throw error;
+    
+    // Actualizar objeto local
+    causaActualDetalle.observaciones_fusion = nuevoValor;
+    
+    // Recargar
+    cargarMovimientos();
+    
+    showSuccess('Movimiento actualizado correctamente');
+    
+  } catch (err) {
+    console.error('Error al actualizar:', err);
+    showError('Error al actualizar el movimiento: ' + err.message);
+  }
+}
+
+async function eliminarMovimiento(index) {
+  if (!confirm('¿Estás seguro de eliminar este movimiento?')) return;
+  
+  if (!causaActualDetalle) return;
+  
+  // Parsear movimientos
+  let observaciones = causaActualDetalle.observaciones_fusion || '';
+  const movimientos = parsearMovimientos(observaciones);
+  
+  // Filtrar el que queremos eliminar
+  const movimientosFiltrados = movimientos.filter(m => m.index !== index);
+  
+  if (movimientosFiltrados.length === movimientos.length) {
+    showError('No se encontró el movimiento a eliminar');
+    return;
+  }
+  
+  // Reconstruir
+  const nuevoValor = movimientosFiltrados.reverse().map(m => `${m.fecha}##${m.texto}##${m.usuario}`).join('/') + '/';
+  
+  try {
+    const { error } = await supabaseClient
+      .from('deudas')
+      .update({ observaciones_fusion: nuevoValor || null })
+      .eq('id', causaActualDetalle.id);
+    
+    if (error) throw error;
+    
+    // Actualizar objeto local
+    causaActualDetalle.observaciones_fusion = nuevoValor || null;
+    
+    // Recargar
+    cargarMovimientos();
+    
+    showSuccess('Movimiento eliminado correctamente');
+    
+  } catch (err) {
+    console.error('Error al eliminar:', err);
+    showError('Error al eliminar el movimiento: ' + err.message);
+  }
+}
+
+function cargarMasMovimientos() {
+  movimientosMostrados += 5;
+  cargarMovimientos();
+}
+
+// ==========================================
+// CERRAR MODAL
+// ==========================================
+
 function cerrarModalDetalle() {
-  document.getElementById('modalDetalle').style.display = 'none';
+  const modal = document.getElementById('modalDetalle');
+  if (modal) {
+    modal.style.display = 'none';
+  }
   causaActualDetalle = null;
+  
+  // Ocultar formulario si quedó abierto
+  cancelarNuevo();
 }
 
 function editarDesdeDetalle() {
   if (!causaActualDetalle) return;
   const idGuardado = causaActualDetalle.id;
   
-  // Cerrar modal detalle manualmente sin usar la función
-  document.getElementById('modalDetalle').style.display = 'none';
-  causaActualDetalle = null;
+  // Cerrar modal detalle
+  cerrarModalDetalle();
   
-  // Abrir modal edición con delay suficiente
+  // Abrir modal edición con delay
   setTimeout(() => {
     editarCausa(idGuardado);
   }, 300);
 }
 
 // ==========================================
-// EDICIÓN
+// EDICIÓN DE CAUSA (ORIGINAL)
 // ==========================================
 
 function editarCausa(id) {
-  // Convertir a número por si viene como string
   const idNum = Number(id);
   const causa = causas.find(c => Number(c.id) === idNum);
   if (!causa) {
@@ -327,7 +759,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalEdicion = document.getElementById('modalEdicion');
     const modalDetalle = document.getElementById('modalDetalle');
     
-    // Solo cerrar si el modal está visible Y se clickeó el fondo
     if (modalEdicion && modalEdicion.style.display === 'block' && event.target === modalEdicion) {
       cerrarModal();
     }
@@ -388,3 +819,13 @@ window.guardarEdicion = guardarEdicion;
 window.limpiarTodasLasCausas = limpiarTodasLasCausas;
 window.editarCausa = editarCausa;
 window.eliminarCausa = eliminarCausa;
+window.toggleExpandirDetalle = toggleExpandirDetalle;
+window.cambiarTab = cambiarTab;
+window.mostrarFormNuevo = mostrarFormNuevo;
+window.cancelarNuevo = cancelarNuevo;
+window.guardarNuevoMovimiento = guardarNuevoMovimiento;
+window.editarMovimiento = editarMovimiento;
+window.cancelarEdicionMovimiento = cancelarEdicionMovimiento;
+window.guardarEdicionMovimiento = guardarEdicionMovimiento;
+window.eliminarMovimiento = eliminarMovimiento;
+window.cargarMasMovimientos = cargarMasMovimientos;
