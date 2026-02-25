@@ -372,13 +372,26 @@ function parsearMovimientos(texto) {
   if (!texto) return [];
   
   const movimientos = [];
+  
+  // Si el texto no tiene el formato nuevo (##), tratarlo como una sola observación
+  if (!texto.includes('##')) {
+    // Es una observación antigua, mostrarla como un solo movimiento
+    const hoy = new Date().toLocaleDateString('es-AR');
+    return [{
+      fecha: hoy,
+      texto: texto,
+      usuario: 'Histórico',
+      index: 0
+    }];
+  }
+  
   const partes = texto.split('/').filter(p => p.trim() !== '');
   
   partes.forEach((parte, index) => {
     const datos = parte.split('##');
     movimientos.push({
-      fecha: datos[0] || '',
-      texto: datos[1] || '',
+      fecha: datos[0] || '-',
+      texto: datos[1] || parte, // Si no hay texto, mostrar la parte completa
       usuario: datos[2] || 'Sistema',
       index: index
     });
