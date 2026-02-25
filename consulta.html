@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/styles-internal.css">
   
   <style>
+    /* Modal base */
     .modal {
       display: none;
       position: fixed;
@@ -25,20 +26,26 @@
     
     .modal-content {
       background-color: white;
-      margin: 5% auto;
-      padding: 30px;
+      margin: 2% auto;
+      padding: 0;
       border-radius: 10px;
-      width: 90%;
-      max-width: 600px;
-      max-height: 80vh;
+      width: 95%;
+      max-width: 900px;
+      max-height: 90vh;
       overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
     
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      padding: 20px 30px;
+      border-bottom: 1px solid #eee;
+      background: white;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
     
     .close {
@@ -52,6 +59,363 @@
       color: #333;
     }
     
+    /* NUEVO DISEÑO MODAL DETALLE */
+    
+    /* Sección superior - Resumen verde */
+    .detalle-resumen {
+      background-color: #E4F4ED;
+      padding: 20px 30px;
+      position: relative;
+    }
+    
+    .detalle-resumen-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    
+    .resumen-item {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .resumen-label {
+      font-size: 11px;
+      color: #666;
+      text-transform: uppercase;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+    
+    .resumen-value {
+      font-size: 14px;
+      color: #333;
+      font-weight: 600;
+    }
+    
+    .resumen-procurador {
+      background: rgba(255,255,255,0.7);
+      padding: 8px 15px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-bottom: 15px;
+      font-size: 13px;
+      color: #555;
+    }
+    
+    /* Botón expandir */
+    .btn-expandir {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: white;
+      border: 2px solid #2E7D52;
+      color: #2E7D52;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-expandir:hover {
+      background: #2E7D52;
+      color: white;
+    }
+    
+    .btn-expandir.expandido {
+      transform: translateY(-50%) rotate(45deg);
+    }
+    
+    /* Sección expandible con todos los datos */
+    .detalle-completo {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.5s ease-out;
+      background: #f9f9f9;
+      border-bottom: 3px solid #E4F4ED;
+    }
+    
+    .detalle-completo.expandido {
+      max-height: 2000px;
+      transition: max-height 0.5s ease-in;
+    }
+    
+    .detalle-completo-contenido {
+      padding: 20px 30px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 15px;
+    }
+    
+    .campo-completo {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 3px solid #2E7D52;
+    }
+    
+    .campo-completo-label {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    
+    .campo-completo-value {
+      font-size: 13px;
+      color: #333;
+      font-weight: 500;
+      word-break: break-word;
+    }
+    
+    /* Sección inferior - Movimientos rosa */
+    .detalle-movimientos {
+      background-color: #FFF0F5;
+      padding: 20px 30px;
+      min-height: 300px;
+    }
+    
+    /* Tabs */
+    .tabs-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: #e0e0e0;
+      color: #666;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.3s;
+    }
+    
+    .tab-btn:hover {
+      background: #d0d0d0;
+    }
+    
+    .tab-btn.activo {
+      background: #2E7D52;
+      color: white;
+    }
+    
+    /* Botón nuevo */
+    .btn-nuevo-container {
+      margin-bottom: 15px;
+    }
+    
+    .btn-nuevo {
+      padding: 8px 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .btn-nuevo:hover {
+      background: #45a049;
+    }
+    
+    /* Formulario nuevo movimiento */
+    .nuevo-movimiento-form {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: none;
+    }
+    
+    .nuevo-movimiento-form.visible {
+      display: block;
+      animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .form-fecha {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    
+    .form-textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    
+    .form-botones {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      justify-content: flex-end;
+    }
+    
+    .btn-guardar {
+      padding: 8px 20px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    .btn-cancelar {
+      padding: 8px 20px;
+      background: #999;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    /* Timeline de movimientos */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .movimiento-item {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      position: relative;
+      transition: all 0.3s;
+    }
+    
+    .movimiento-item:hover {
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    .movimiento-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .movimiento-fecha {
+      font-size: 13px;
+      color: #2E7D52;
+      font-weight: bold;
+    }
+    
+    .movimiento-acciones {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-icono {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .btn-editar {
+      background: #FFC107;
+      color: #333;
+    }
+    
+    .btn-editar:hover {
+      background: #ffb300;
+    }
+    
+    .btn-eliminar {
+      background: #f44336;
+      color: white;
+    }
+    
+    .btn-eliminar:hover {
+      background: #da190b;
+    }
+    
+    .btn-guardar-edicion {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    .movimiento-texto {
+      font-size: 14px;
+      color: #444;
+      line-height: 1.5;
+    }
+    
+    .movimiento-texto-edit {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #2196F3;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 14px;
+      min-height: 60px;
+      resize: vertical;
+    }
+    
+    /* Botón cargar más */
+    .btn-cargar-mas {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      margin: 20px auto 0;
+      background: white;
+      border: 2px solid #999;
+      color: #666;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      transition: all 0.3s;
+    }
+    
+    .btn-cargar-mas:hover {
+      border-color: #2E7D52;
+      color: #2E7D52;
+    }
+    
+    /* Sin movimientos */
+    .sin-movimientos {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+      font-style: italic;
+    }
+    
+    /* Modal edición (original) */
     .form-group {
       margin-bottom: 15px;
     }
@@ -143,7 +507,7 @@
     </div>
   </main>
 
-  <!-- Modal de Edición -->
+  <!-- Modal de Edición (original) -->
   <div id="modalEdicion" class="modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -206,20 +570,70 @@
     </div>
   </div>
 
-  <!-- Modal de Ver Detalle -->
+  <!-- NUEVO Modal de Ver Detalle -->
   <div id="modalDetalle" class="modal">
-    <div class="modal-content" style="max-width: 800px;">
+    <div class="modal-content">
       <div class="modal-header">
         <h2>📋 Detalle de la Causa</h2>
         <span class="close" onclick="cerrarModalDetalle()">&times;</span>
       </div>
       
-      <div id="detalleContenido">
+      <!-- Sección 1: Resumen verde -->
+      <div class="detalle-resumen">
+        <div class="resumen-procurador" id="resumenProcurador">Procurador: -</div>
+        <div class="detalle-resumen-grid" id="resumenGrid">
+          <!-- Se llena dinámicamente -->
+        </div>
+        <button class="btn-expandir" onclick="toggleExpandirDetalle()" title="Ver todos los datos">+</button>
       </div>
       
-      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+      <!-- Sección 2: Datos completos (expandible) -->
+      <div class="detalle-completo" id="detalleCompleto">
+        <div class="detalle-completo-contenido" id="detalleCompletoContenido">
+          <!-- Se llena dinámicamente -->
+        </div>
+      </div>
+      
+      <!-- Sección 3: Movimientos rosa -->
+      <div class="detalle-movimientos">
+        <!-- Tabs -->
+        <div class="tabs-container">
+          <button class="tab-btn activo" onclick="cambiarTab('extrajudicial')">mov. extrajudicial</button>
+          <button class="tab-btn" onclick="cambiarTab('wsp')">mensajes wsp</button>
+          <button class="tab-btn" onclick="cambiarTab('mail')">mensajes mail</button>
+          <button class="tab-btn" onclick="cambiarTab('expte')">mov/expte</button>
+          <button class="tab-btn" onclick="cambiarTab('mas')">ver mas</button>
+        </div>
+        
+        <!-- Botón nuevo -->
+        <div class="btn-nuevo-container">
+          <button class="btn-nuevo" onclick="mostrarFormNuevo()">
+            <span>+</span> nuevo
+          </button>
+        </div>
+        
+        <!-- Formulario nuevo movimiento -->
+        <div class="nuevo-movimiento-form" id="formNuevoMovimiento">
+          <div class="form-fecha" id="fechaActual"></div>
+          <textarea class="form-textarea" id="textoNuevoMovimiento" placeholder="Escribe la actualización..."></textarea>
+          <div class="form-botones">
+            <button class="btn-cancelar" onclick="cancelarNuevo()">Cancelar</button>
+            <button class="btn-guardar" onclick="guardarNuevoMovimiento()">Guardar</button>
+          </div>
+        </div>
+        
+        <!-- Timeline de movimientos -->
+        <div class="timeline" id="timelineMovimientos">
+          <!-- Se llena dinámicamente -->
+        </div>
+        
+        <!-- Botón cargar más -->
+        <button class="btn-cargar-mas" onclick="cargarMasMovimientos()" title="Cargar más movimientos">+</button>
+      </div>
+      
+      <div style="display: flex; gap: 10px; justify-content: flex-end; padding: 20px 30px; background: white; border-top: 1px solid #eee;">
         <button onclick="cerrarModalDetalle()" class="btn btn-secundario">Cerrar</button>
-        <button onclick="editarDesdeDetalle()" class="btn btn-primario">✏️ Editar</button>
+        <button onclick="editarDesdeDetalle()" class="btn btn-primario">✏️ Editar Causa</button>
       </div>
     </div>
   </div>
