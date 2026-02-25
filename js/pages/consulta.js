@@ -6,7 +6,7 @@ let causas = [];
 let causaEditando = null;
 let causaActualDetalle = null;
 let tabActual = 'extrajudicial';
-let movimientosMostrados = 5; // Cantidad inicial de movimientos a mostrar
+let movimientosMostrados = 5;
 
 // ==========================================
 // CARGAR CAUSAS
@@ -150,15 +150,11 @@ function verDetalle(id) {
   if (!causa) return;
   
   causaActualDetalle = causa;
-  movimientosMostrados = 5; // Resetear contador
+  movimientosMostrados = 5;
   
-  // Llenar resumen (sección verde)
   llenarResumen(causa);
-  
-  // Llenar datos completos (sección expandible)
   llenarDatosCompletos(causa);
   
-  // Resetear estado del expandible
   const detalleCompleto = document.getElementById('detalleCompleto');
   const btnExpandir = document.querySelector('.btn-expandir');
   if (detalleCompleto) {
@@ -169,10 +165,8 @@ function verDetalle(id) {
     btnExpandir.innerHTML = '+';
   }
   
-  // Cargar movimientos de la pestaña activa
   cargarMovimientos();
   
-  // Mostrar modal
   const modal = document.getElementById('modalDetalle');
   if (modal) {
     modal.style.display = 'block';
@@ -180,13 +174,11 @@ function verDetalle(id) {
 }
 
 function llenarResumen(causa) {
-  // Procurador
   const procuradorEl = document.getElementById('resumenProcurador');
   if (procuradorEl) {
     procuradorEl.textContent = 'Procurador: Lucia Mercedes';
   }
   
-  // Grid de resumen
   const grid = document.getElementById('resumenGrid');
   if (!grid) return;
   
@@ -228,7 +220,6 @@ function llenarDatosCompletos(causa) {
   const contenedor = document.getElementById('detalleCompletoContenido');
   if (!contenedor) return;
   
-  // Lista de todos los campos disponibles
   const campos = [
     { label: 'ID', valor: causa.id },
     { label: 'Jud ID', valor: causa.jud_id },
@@ -309,13 +300,11 @@ function toggleExpandirDetalle() {
 function cambiarTab(tab) {
   tabActual = tab;
   
-  // Actualizar botones
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.remove('activo');
   });
   event.target.classList.add('activo');
   
-  // Recargar movimientos
   movimientosMostrados = 5;
   cargarMovimientos();
 }
@@ -324,8 +313,6 @@ function cargarMovimientos() {
   const timeline = document.getElementById('timelineMovimientos');
   if (!timeline || !causaActualDetalle) return;
   
-  // Por ahora solo trabajamos con observaciones_fusion
-  // En el futuro, cada tab usará su propia columna
   let observaciones = '';
   
   switch(tabActual) {
@@ -333,16 +320,13 @@ function cargarMovimientos() {
       observaciones = causaActualDetalle.observaciones_fusion || '';
       break;
     case 'wsp':
-      // observaciones = causaActualDetalle.mensajes_wsp || '';
-      observaciones = ''; // Por ahora vacío hasta crear columna
+      observaciones = '';
       break;
     case 'mail':
-      // observaciones = causaActualDetalle.mensajes_mail || '';
-      observaciones = ''; // Por ahora vacío hasta crear columna
+      observaciones = '';
       break;
     case 'expte':
-      // observaciones = causaActualDetalle.mov_expte || '';
-      observaciones = ''; // Por ahora vacío hasta crear columna
+      observaciones = '';
       break;
     case 'mas':
       observaciones = causaActualDetalle.observaciones || '';
@@ -354,54 +338,57 @@ function cargarMovimientos() {
     return;
   }
   
-  // Parsear movimientos (formato: fecha##texto##usuario/otra_fecha##otro_texto##otro_usuario/)
   const movimientos = parsearMovimientos(observaciones);
-  
-  // Mostrar solo los últimos N movimientos
   const movimientosAMostrar = movimientos.slice(0, movimientosMostrados);
   
   let html = '';
-  movimientosAMostrar.forEach((mov, index) => {
-    html += crearHtmlMovimiento(mov, index);
+  movimientosAMostrar.forEach((mov) => {
+    html += crearHtmlMovimiento(mov);
   });
   
   timeline.innerHTML = html;
 }
 
 function parsearMovimientos(texto) {
-  if (!texto) return [];
+  if (!texto || texto.trim() === '') return [];
   
-  const movimientos = [];
-  
-  // Si el texto no tiene el formato nuevo (##), tratarlo como una sola observación
+  // Si no tiene ##, es formato antiguo
   if (!texto.includes('##')) {
-    // Es una observación antigua, mostrarla como un solo movimiento
-    const hoy = new Date().toLocaleDateString('es-AR');
+    const hoy = new Date();
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const anio = hoy.getFullYear();
     return [{
-      fecha: hoy,
+      fecha: dia + '/' + mes + '/' + anio,
       texto: texto,
       usuario: 'Histórico',
       index: 0
     }];
   }
   
-  const partes = texto.split('/').filter(p => p.trim() !== '');
+  const movimientos = [];
+  // Separar por "/" pero mantener el orden original (no reverse todavía)
+  const partes = texto.split('/').filter(function(p) { 
+    return p.trim() !== ''; 
+  });
   
-  partes.forEach((parte, index) => {
+  partes.forEach(function(parte, index) {
+    if (!parte.includes('##')) return;
+    
     const datos = parte.split('##');
     movimientos.push({
       fecha: datos[0] || '-',
-      texto: datos[1] || parte, // Si no hay texto, mostrar la parte completa
+      texto: datos[1] || '',
       usuario: datos[2] || 'Sistema',
       index: index
     });
   });
   
-  // Ordenar por fecha descendente (más reciente primero)
+  // Reverse al final para que el más reciente quede primero
   return movimientos.reverse();
 }
 
-function crearHtmlMovimiento(mov, index) {
+function crearHtmlMovimiento(mov) {
   return `
     <div class="movimiento-item" data-index="${mov.index}">
       <div class="movimiento-header">
@@ -426,7 +413,6 @@ function mostrarFormNuevo() {
   const textarea = document.getElementById('textoNuevoMovimiento');
   
   if (form && fechaEl) {
-    // Fecha automática - formato DD/MM/YYYY
     const hoy = new Date();
     const dia = String(hoy.getDate()).padStart(2, '0');
     const mes = String(hoy.getMonth() + 1).padStart(2, '0');
@@ -435,98 +421,11 @@ function mostrarFormNuevo() {
     
     fechaEl.textContent = fechaFormateada;
     
-    // Limpiar textarea
     if (textarea) textarea.value = '';
     
-    // Mostrar formulario
     form.classList.add('visible');
     if (textarea) textarea.focus();
   }
-}
-
-async function guardarNuevoMovimiento() {
-  const textarea = document.getElementById('textoNuevoMovimiento');
-  const fechaEl = document.getElementById('fechaActual');
-  
-  if (!textarea || !fechaEl || !causaActualDetalle) return;
-  
-  const texto = textarea.value.trim();
-  if (!texto) {
-    alert('Por favor escribe una observación');
-    return;
-  }
-  
-  const fecha = fechaEl.textContent;
-  const usuario = 'Lucia';
-  
-  // Crear nuevo registro con formato correcto
-  const nuevoRegistro = fecha + '##' + texto + '##' + usuario + '/';
-  
-  // Obtener valor actual (limpiar si es null o undefined)
-  let valorActual = causaActualDetalle.observaciones_fusion || '';
-  
-  // Agregar nuevo registro
-  const nuevoValor = valorActual + nuevoRegistro;
-  
-  try {
-    const { error } = await supabaseClient
-      .from('deudas')
-      .update({ observaciones_fusion: nuevoValor })
-      .eq('id', causaActualDetalle.id);
-    
-    if (error) throw error;
-    
-    // Actualizar objeto local
-    causaActualDetalle.observaciones_fusion = nuevoValor;
-    
-    // Ocultar formulario
-    cancelarNuevo();
-    
-    // Recargar movimientos
-    cargarMovimientos();
-    
-    showSuccess('Movimiento guardado correctamente');
-    
-  } catch (err) {
-    console.error('Error al guardar:', err);
-    showError('Error al guardar el movimiento: ' + err.message);
-  }
-}
-
-function parsearMovimientos(texto) {
-  if (!texto || texto.trim() === '') return [];
-  
-  const movimientos = [];
-  
-  // Si el texto no tiene el formato nuevo (##), tratarlo como observación antigua
-  if (!texto.includes('##')) {
-    const hoy = new Date();
-    const dia = String(hoy.getDate()).padStart(2, '0');
-    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-    const anio = hoy.getFullYear();
-    return [{
-      fecha: dia + '/' + mes + '/' + anio,
-      texto: texto,
-      usuario: 'Histórico',
-      index: 0
-    }];
-  }
-  
-  // Dividir por "/" para separar movimientos
-  const partes = texto.split('/').filter(function(p) { return p.trim() !== ''; });
-  
-  partes.forEach(function(parte, index) {
-    const datos = parte.split('##');
-    movimientos.push({
-      fecha: datos[0] || '-',
-      texto: datos[1] || parte,
-      usuario: datos[2] || 'Sistema',
-      index: index
-    });
-  });
-  
-  // Ordenar por fecha descendente (más reciente primero)
-  return movimientos.reverse();
 }
 
 function cancelarNuevo() {
@@ -548,17 +447,16 @@ async function guardarNuevoMovimiento() {
     return;
   }
   
-  const fecha = fechaEl.textContent; // Ya está en formato DD/MM/YYYY
-  const usuario = 'Lucia'; // Podés cambiar esto o hacerlo dinámico
+  const fecha = fechaEl.textContent;
+  const usuario = 'Lucia';
   
-  // Crear nuevo registro
-  const nuevoRegistro = `${fecha}##${texto}##${usuario}`;
+  // Formato: fecha##texto##usuario/ (con / al final como separador)
+  const nuevoRegistro = fecha + '##' + texto + '##' + usuario + '/';
   
-  // Obtener valor actual
   let valorActual = causaActualDetalle.observaciones_fusion || '';
   
-  // Agregar nuevo registro al final
-  const nuevoValor = valorActual ? `${valorActual}${nuevoRegistro}/` : `${nuevoRegistro}/`;
+  // Si ya hay valor, agregar al final
+  const nuevoValor = valorActual + nuevoRegistro;
   
   try {
     const { error } = await supabaseClient
@@ -568,13 +466,9 @@ async function guardarNuevoMovimiento() {
     
     if (error) throw error;
     
-    // Actualizar objeto local
     causaActualDetalle.observaciones_fusion = nuevoValor;
     
-    // Ocultar formulario
     cancelarNuevo();
-    
-    // Recargar movimientos
     cargarMovimientos();
     
     showSuccess('Movimiento guardado correctamente');
@@ -600,18 +494,16 @@ function editarMovimiento(index) {
   
   const textoActual = textoDiv.textContent;
   
-  // Reemplazar por textarea
   textoDiv.innerHTML = `<textarea class="movimiento-texto-edit" id="edit-mov-${index}">${textoActual}</textarea>`;
   
-  // Cambiar botones
   accionesDiv.innerHTML = `
     <button class="btn-icono btn-guardar-edicion" onclick="guardarEdicionMovimiento(${index})" title="Guardar">💾</button>
-    <button class="btn-icono btn-cancelar" onclick="cancelarEdicionMovimiento(${index}, '${textoActual.replace(/'/g, "\\'")}')" title="Cancelar">❌</button>
+    <button class="btn-icono btn-cancelar" onclick="cancelarEdicionMovimiento(${index})" title="Cancelar">❌</button>
   `;
 }
 
-function cancelarEdicionMovimiento(index, textoOriginal) {
-  cargarMovimientos(); // Recarga todo, más simple
+function cancelarEdicionMovimiento(index) {
+  cargarMovimientos();
 }
 
 async function guardarEdicionMovimiento(index) {
@@ -620,22 +512,22 @@ async function guardarEdicionMovimiento(index) {
   
   const nuevoTexto = textarea.value.trim();
   
-  // Parsear movimientos actuales
   let observaciones = causaActualDetalle.observaciones_fusion || '';
   const movimientos = parsearMovimientos(observaciones);
   
-  // Encontrar y actualizar el movimiento correcto
-  // Como reverseamos en parsear, necesitamos encontrar el índice original
-  const movimientoAEditar = movimientos.find(m => m.index === index);
-  if (!movimientoAEditar) {
+  // Encontrar el movimiento por index (en el array ya reverseado)
+  const movIndex = movimientos.findIndex(m => m.index === index);
+  if (movIndex === -1) {
     showError('No se encontró el movimiento a editar');
     return;
   }
   
-  movimientoAEditar.texto = nuevoTexto;
+  movimientos[movIndex].texto = nuevoTexto;
   
-  // Reconstruir el string
-  const nuevoValor = movimientos.reverse().map(m => `${m.fecha}##${m.texto}##${m.usuario}`).join('/') + '/';
+  // Reconstruir: volver a orden original, mapear, unir
+  const nuevoValor = movimientos.reverse().map(function(m) {
+    return m.fecha + '##' + m.texto + '##' + m.usuario;
+  }).join('/') + '/';
   
   try {
     const { error } = await supabaseClient
@@ -645,10 +537,7 @@ async function guardarEdicionMovimiento(index) {
     
     if (error) throw error;
     
-    // Actualizar objeto local
     causaActualDetalle.observaciones_fusion = nuevoValor;
-    
-    // Recargar
     cargarMovimientos();
     
     showSuccess('Movimiento actualizado correctamente');
@@ -664,11 +553,9 @@ async function eliminarMovimiento(index) {
   
   if (!causaActualDetalle) return;
   
-  // Parsear movimientos
   let observaciones = causaActualDetalle.observaciones_fusion || '';
   const movimientos = parsearMovimientos(observaciones);
   
-  // Filtrar el que queremos eliminar
   const movimientosFiltrados = movimientos.filter(m => m.index !== index);
   
   if (movimientosFiltrados.length === movimientos.length) {
@@ -676,8 +563,12 @@ async function eliminarMovimiento(index) {
     return;
   }
   
-  // Reconstruir
-  const nuevoValor = movimientosFiltrados.reverse().map(m => `${m.fecha}##${m.texto}##${m.usuario}`).join('/') + '/';
+  let nuevoValor = '';
+  if (movimientosFiltrados.length > 0) {
+    nuevoValor = movimientosFiltrados.reverse().map(function(m) {
+      return m.fecha + '##' + m.texto + '##' + m.usuario;
+    }).join('/') + '/';
+  }
   
   try {
     const { error } = await supabaseClient
@@ -687,10 +578,7 @@ async function eliminarMovimiento(index) {
     
     if (error) throw error;
     
-    // Actualizar objeto local
     causaActualDetalle.observaciones_fusion = nuevoValor || null;
-    
-    // Recargar
     cargarMovimientos();
     
     showSuccess('Movimiento eliminado correctamente');
@@ -716,8 +604,6 @@ function cerrarModalDetalle() {
     modal.style.display = 'none';
   }
   causaActualDetalle = null;
-  
-  // Ocultar formulario si quedó abierto
   cancelarNuevo();
 }
 
@@ -725,17 +611,15 @@ function editarDesdeDetalle() {
   if (!causaActualDetalle) return;
   const idGuardado = causaActualDetalle.id;
   
-  // Cerrar modal detalle
   cerrarModalDetalle();
   
-  // Abrir modal edición con delay
   setTimeout(() => {
     editarCausa(idGuardado);
   }, 300);
 }
 
 // ==========================================
-// EDICIÓN DE CAUSA (ORIGINAL)
+// EDICIÓN DE CAUSA
 // ==========================================
 
 function editarCausa(id) {
