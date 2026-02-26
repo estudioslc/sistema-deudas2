@@ -352,7 +352,7 @@ function cargarMovimientos() {
 function parsearMovimientos(texto) {
   if (!texto || texto.trim() === '') return [];
   
-  // Si no tiene ##, es formato antiguo
+  // Detectar formato viejo (sin ##)
   if (!texto.includes('##')) {
     const hoy = new Date();
     const dia = String(hoy.getDate()).padStart(2, '0');
@@ -365,6 +365,27 @@ function parsearMovimientos(texto) {
       index: 0
     }];
   }
+  
+  const movimientos = [];
+  // Usar || como separador de movimientos (no / para no confundir con fechas)
+  const partes = texto.split('||').filter(function(p) { 
+    return p.trim() !== ''; 
+  });
+  
+  partes.forEach(function(parte, index) {
+    if (!parte.includes('##')) return;
+    
+    const datos = parte.split('##');
+    movimientos.push({
+      fecha: datos[0] || '-',
+      texto: datos[1] || '',
+      usuario: datos[2] || 'Sistema',
+      index: index
+    });
+  });
+  
+  return movimientos.reverse();
+}
   
   const movimientos = [];
   // Separar por "/" pero mantener el orden original (no reverse todavía)
@@ -447,15 +468,19 @@ async function guardarNuevoMovimiento() {
     return;
   }
   
-  const fecha = fechaEl.textContent;
+  const fecha = fechaEl.textContent; // formato: 26/02/2026
   const usuario = 'Lucia';
   
-  // Formato: fecha##texto##usuario/ (con / al final como separador)
-  const nuevoRegistro = fecha + '##' + texto + '##' + usuario + '/';
+  // Nuevo formato: fecha##texto##usuario|| (usamos || como separador)
+  const nuevoRegistro = fecha + '##' + texto + '##' + usuario + '||';
   
   let valorActual = causaActualDetalle.observaciones_fusion || '';
   
-  // Si ya hay valor, agregar al final
+  // Si el valor actual usa el formato viejo (termina en /), convertirlo
+  if (valorActual.endsWith('/')) {
+    valorActual = valorActual.replace(/\//g, '||');
+  }
+  
   const nuevoValor = valorActual + nuevoRegistro;
   
   try {
@@ -507,7 +532,7 @@ function cancelarEdicionMovimiento(index) {
 }
 
 async function guardarEdicionMovimiento(index) {
-  const textarea = document.getElementById(`edit-mov-${index}`);
+  const textarea = document.getElementById('edit-mov-' + index);
   if (!textarea || !causaActualDetalle) return;
   
   const nuevoTexto = textarea.value.trim();
@@ -515,8 +540,10 @@ async function guardarEdicionMovimiento(index) {
   let observaciones = causaActualDetalle.observaciones_fusion || '';
   const movimientos = parsearMovimientos(observaciones);
   
-  // Encontrar el movimiento por index (en el array ya reverseado)
-  const movIndex = movimientos.findIndex(m => m.index === index);
+  const movIndex = movimientos.findIndex(function(m) { 
+    return m.index === index; 
+  });
+  
   if (movIndex === -1) {
     showError('No se encontró el movimiento a editar');
     return;
@@ -524,10 +551,10 @@ async function guardarEdicionMovimiento(index) {
   
   movimientos[movIndex].texto = nuevoTexto;
   
-  // Reconstruir: volver a orden original, mapear, unir
+  // Reconstruir con || como separador
   const nuevoValor = movimientos.reverse().map(function(m) {
     return m.fecha + '##' + m.texto + '##' + m.usuario;
-  }).join('/') + '/';
+  }).join('||') + '||';
   
   try {
     const { error } = await supabaseClient
@@ -556,7 +583,9 @@ async function eliminarMovimiento(index) {
   let observaciones = causaActualDetalle.observaciones_fusion || '';
   const movimientos = parsearMovimientos(observaciones);
   
-  const movimientosFiltrados = movimientos.filter(m => m.index !== index);
+  const movimientosFiltrados = movimientos.filter(function(m) { 
+    return m.index !== index; 
+  });
   
   if (movimientosFiltrados.length === movimientos.length) {
     showError('No se encontró el movimiento a eliminar');
@@ -567,7 +596,7 @@ async function eliminarMovimiento(index) {
   if (movimientosFiltrados.length > 0) {
     nuevoValor = movimientosFiltrados.reverse().map(function(m) {
       return m.fecha + '##' + m.texto + '##' + m.usuario;
-    }).join('/') + '/';
+    }).join('||') + '||';
   }
   
   try {
