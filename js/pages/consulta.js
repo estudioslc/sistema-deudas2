@@ -367,7 +367,7 @@ function parsearMovimientos(texto) {
   }
   
   const movimientos = [];
-  // Usar || como separador de movimientos (no / para no confundir con fechas)
+  // Usar || como separador de movimientos
   const partes = texto.split('||').filter(function(p) { 
     return p.trim() !== ''; 
   });
@@ -384,28 +384,6 @@ function parsearMovimientos(texto) {
     });
   });
   
-  return movimientos.reverse();
-}
-  
-  const movimientos = [];
-  // Separar por "/" pero mantener el orden original (no reverse todavía)
-  const partes = texto.split('/').filter(function(p) { 
-    return p.trim() !== ''; 
-  });
-  
-  partes.forEach(function(parte, index) {
-    if (!parte.includes('##')) return;
-    
-    const datos = parte.split('##');
-    movimientos.push({
-      fecha: datos[0] || '-',
-      texto: datos[1] || '',
-      usuario: datos[2] || 'Sistema',
-      index: index
-    });
-  });
-  
-  // Reverse al final para que el más reciente quede primero
   return movimientos.reverse();
 }
 
@@ -468,10 +446,10 @@ async function guardarNuevoMovimiento() {
     return;
   }
   
-  const fecha = fechaEl.textContent; // formato: 26/02/2026
+  const fecha = fechaEl.textContent;
   const usuario = 'Lucia';
   
-  // Nuevo formato: fecha##texto##usuario|| (usamos || como separador)
+  // Nuevo formato: fecha##texto##usuario||
   const nuevoRegistro = fecha + '##' + texto + '##' + usuario + '||';
   
   let valorActual = causaActualDetalle.observaciones_fusion || '';
@@ -509,7 +487,7 @@ async function guardarNuevoMovimiento() {
 // ==========================================
 
 function editarMovimiento(index) {
-  const movimientoItem = document.querySelector(`.movimiento-item[data-index="${index}"]`);
+  const movimientoItem = document.querySelector('.movimiento-item[data-index="' + index + '"]');
   if (!movimientoItem) return;
   
   const textoDiv = movimientoItem.querySelector('.movimiento-texto');
@@ -519,7 +497,7 @@ function editarMovimiento(index) {
   
   const textoActual = textoDiv.textContent;
   
-  textoDiv.innerHTML = `<textarea class="movimiento-texto-edit" id="edit-mov-${index}">${textoActual}</textarea>`;
+  textoDiv.innerHTML = '<textarea class="movimiento-texto-edit" id="edit-mov-' + index + '">' + textoActual + '</textarea>';
   
   accionesDiv.innerHTML = `
     <button class="btn-icono btn-guardar-edicion" onclick="guardarEdicionMovimiento(${index})" title="Guardar">💾</button>
@@ -551,7 +529,6 @@ async function guardarEdicionMovimiento(index) {
   
   movimientos[movIndex].texto = nuevoTexto;
   
-  // Reconstruir con || como separador
   const nuevoValor = movimientos.reverse().map(function(m) {
     return m.fecha + '##' + m.texto + '##' + m.usuario;
   }).join('||') + '||';
@@ -642,7 +619,7 @@ function editarDesdeDetalle() {
   
   cerrarModalDetalle();
   
-  setTimeout(() => {
+  setTimeout(function() {
     editarCausa(idGuardado);
   }, 300);
 }
@@ -653,7 +630,10 @@ function editarDesdeDetalle() {
 
 function editarCausa(id) {
   const idNum = Number(id);
-  const causa = causas.find(c => Number(c.id) === idNum);
+  const causa = causas.find(function(c) { 
+    return Number(c.id) === idNum; 
+  });
+  
   if (!causa) {
     console.error('No se encontró la causa con id:', id);
     return;
@@ -747,7 +727,7 @@ function filtrarPorEstado(estado) {
 // INICIALIZACIÓN
 // ==========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
   const params = new URLSearchParams(window.location.search);
   const filtro = params.get('filtro');
   
@@ -777,10 +757,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function debounce(func, wait) {
   let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
+  return function executedFunction() {
+    const args = arguments;
+    const later = function() {
       clearTimeout(timeout);
-      func(...args);
+      func.apply(null, args);
     };
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
