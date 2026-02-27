@@ -1015,14 +1015,26 @@ async function limpiarTodasLasCausas() {
 
 function editarMovExpte(id) {
   // Ocultar contenido y mostrar formulario
-  document.getElementById('contenido-mov-' + id).style.display = 'none';
-  document.getElementById('form-edit-' + id).style.display = 'block';
+  const contenido = document.getElementById('contenido-mov-' + id);
+  const form = document.getElementById('form-edit-' + id);
+  if (contenido) contenido.style.display = 'none';
+  if (form) form.style.display = 'block';
+  
+  // Limpiar el input de archivo al abrir edición
+  const archivoInput = document.getElementById('edit-arch-' + id);
+  if (archivoInput) archivoInput.value = '';
 }
 
 function cancelarEdicionMovExpte(id) {
   // Mostrar contenido y ocultar formulario
-  document.getElementById('contenido-mov-' + id).style.display = 'block';
-  document.getElementById('form-edit-' + id).style.display = 'none';
+  const contenido = document.getElementById('contenido-mov-' + id);
+  const form = document.getElementById('form-edit-' + id);
+  if (contenido) contenido.style.display = 'block';
+  if (form) form.style.display = 'none';
+  
+  // Limpiar input de archivo al cancelar
+  const archivoInput = document.getElementById('edit-arch-' + id);
+  if (archivoInput) archivoInput.value = '';
 }
 
 async function guardarEdicionMovExpte(id) {
@@ -1030,24 +1042,40 @@ async function guardarEdicionMovExpte(id) {
   const observaciones = document.getElementById('edit-obs-' + id).value.trim();
   const archivoInput = document.getElementById('edit-arch-' + id);
   
+  // Mostrar indicador de carga
+  const btnGuardar = document.querySelector(`#form-edit-${id} .btn-guardar-edicion`);
+  const textoOriginal = btnGuardar ? btnGuardar.innerHTML : '💾';
+  if (btnGuardar) {
+    btnGuardar.innerHTML = '⏳';
+    btnGuardar.disabled = true;
+  }
+  
   try {
     let archivoUrl = null;
     let nombreArchivo = null;
     
     // Si hay nuevo archivo, subirlo
-    if (archivoInput.files.length > 0) {
+    if (archivoInput && archivoInput.files.length > 0) {
       const archivo = archivoInput.files[0];
       
       // Validar tipo
       const tiposPermitidos = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
       if (!tiposPermitidos.includes(archivo.type)) {
         alert('Solo se permiten archivos PDF, JPG o PNG');
+        if (btnGuardar) {
+          btnGuardar.innerHTML = textoOriginal;
+          btnGuardar.disabled = false;
+        }
         return;
       }
       
       // Validar tamaño (máx 10MB)
       if (archivo.size > 10 * 1024 * 1024) {
         alert('El archivo no puede superar los 10MB');
+        if (btnGuardar) {
+          btnGuardar.innerHTML = textoOriginal;
+          btnGuardar.disabled = false;
+        }
         return;
       }
       
@@ -1090,14 +1118,23 @@ async function guardarEdicionMovExpte(id) {
     
     if (error) throw error;
     
+    // Cerrar formulario de edición ANTES de recargar
+    cancelarEdicionMovExpte(id);
+    
     // Recargar movimientos
-    cargarMovimientosExpte();
+    await cargarMovimientosExpte();
     
     showSuccess('Movimiento actualizado correctamente');
     
   } catch (err) {
     console.error('Error al actualizar:', err);
     showError('Error al actualizar el movimiento: ' + err.message);
+  } finally {
+    // Restaurar botón
+    if (btnGuardar) {
+      btnGuardar.innerHTML = textoOriginal;
+      btnGuardar.disabled = false;
+    }
   }
 }
 
