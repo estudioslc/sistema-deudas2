@@ -390,13 +390,11 @@ async function guardarMovExpte() {
   }
   
   try {
-    let archivoUrl = null;
-    let nombreArchivo = null;
+    let archivosArray = []; // Ahora es un array de objetos {url, nombre}
     
     // Subir archivo si hay
     if (archivoInput.files.length > 0) {
       const archivo = archivoInput.files[0];
-      nombreArchivo = archivo.name;
       
       // Validar tipo
       const tiposPermitidos = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
@@ -426,10 +424,14 @@ async function guardarMovExpte() {
         .from('documentos-judiciales')
         .getPublicUrl(fileName);
       
-      archivoUrl = urlData.publicUrl;
+      // Agregar al array de archivos
+      archivosArray.push({
+        url: urlData.publicUrl,
+        nombre: archivo.name
+      });
     }
     
-    // Guardar en tabla
+    // Guardar en tabla - ahora archivo_url es un array JSON
     const { error } = await supabaseClient
       .from('movimientos_judiciales')
       .insert({
@@ -438,8 +440,7 @@ async function guardarMovExpte() {
         fecha: fecha,
         notificado: notificado,
         observaciones: observaciones || null,
-        archivo_url: archivoUrl,
-        nombre_archivo: nombreArchivo,
+        archivo_url: archivosArray, // Array de objetos {url, nombre}
         usuario: 'Lucia'
       });
     
@@ -489,6 +490,36 @@ async function cargarMovimientosExpte() {
   }
 }
 
+// Función auxiliar para obtener array de archivos desde cualquier formato
+function obtenerArchivosArray(mov) {
+  // Si es null o undefined, retornar array vacío
+  if (!mov.archivo_url) return [];
+  
+  // Si ya es array, usarlo directamente
+  if (Array.isArray(mov.archivo_url)) {
+    return mov.archivo_url;
+  }
+  
+  // Si es string (formato viejo), convertir a array
+  if (typeof mov.archivo_url === 'string' && mov.archivo_url.trim() !== '') {
+    return [{
+      url: mov.archivo_url,
+      nombre: mov.nombre_archivo || 'Archivo'
+    }];
+  }
+  
+  // Si es objeto JSON de Supabase
+  if (typeof mov.archivo_url === 'object') {
+    // Podría ser un objeto con {url, nombre} o un array
+    if (mov.archivo_url.url) {
+      return [mov.archivo_url];
+    }
+    return Object.values(mov.archivo_url);
+  }
+  
+  return [];
+}
+
 function crearHtmlMovExpte(mov) {
   const nombresTipos = {
     'demanda_iniciada': 'Demanda iniciada',
@@ -500,6 +531,23 @@ function crearHtmlMovExpte(mov) {
   
   const tipoNombre = nombresTipos[mov.tipo_movimiento] || mov.tipo_movimiento;
   const fechaFormateada = new Date(mov.fecha).toLocaleDateString('es-AR');
+  
+  // Obtener array de archivos (soporta formato viejo y nuevo)
+  const archivos = obtenerArchivosArray(mov);
+  
+  // Generar HTML de archivos (todos en línea)
+  let archivosHtml = '';
+  if (archivos.length > 0) {
+    archivosHtml = '<div class="archivos-container" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">';
+    archivos.forEach((arch, index) => {
+      archivosHtml += `
+        <a href="${arch.url}" target="_blank" class="mov-expte-archivo" title="${arch.nombre || 'Ver archivo'}">
+          📎 ${arch.nombre || 'Archivo ' + (index + 1)}
+        </a>
+      `;
+    });
+    archivosHtml += '</div>';
+  }
   
   let html = `
     <div class="mov-expte-item" id="mov-expte-${mov.id}">
@@ -519,11 +567,7 @@ function crearHtmlMovExpte(mov) {
       
       <div id="contenido-mov-${mov.id}">
         ${mov.observaciones ? `<div class="mov-expte-observaciones" id="obs-text-${mov.id}">${mov.observaciones}</div>` : ''}
-        ${mov.archivo_url ? `
-          <a href="${mov.archivo_url}" target="_blank" class="mov-expte-archivo" id="arch-link-${mov.id}">
-            📎 ${mov.nombre_archivo || 'Ver archivo'}
-          </a>
-        ` : ''}
+        ${archivosHtml}
       </div>
       
       <div id="form-edit-${mov.id}" style="display: none; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 5px;">
@@ -1051,10 +1095,19 @@ async function guardarEdicionMovExpte(id) {
   }
   
   try {
-    let archivoUrl = null;
-    let nombreArchivo = null;
+    // Primero obtener el registro actual para saber qué archivos ya tiene
+    const { data: movActual, error: errorConsulta } = await supabaseClient
+      .from('movimientos_judiciales')
+      .select('archivo_url')
+      .eq('id', id)
+      .single();
     
-    // Si hay nuevo archivo, subirlo
+    if (errorConsulta) throw errorConsulta;
+    
+    // Obtener array actual de archivos
+    let archivosArray = obtenerArchivosArray(movActual);
+    
+    // Si hay nuevo archivo, subirlo y agregarlo al array
     if (archivoInput && archivoInput.files.length > 0) {
       const archivo = archivoInput.files[0];
       
@@ -1094,21 +1147,19 @@ async function guardarEdicionMovExpte(id) {
         .from('documentos-judiciales')
         .getPublicUrl(fileName);
       
-      archivoUrl = urlData.publicUrl;
-      nombreArchivo = archivo.name;
+      // Agregar el nuevo archivo al array existente (NO reemplazar)
+      archivosArray.push({
+        url: urlData.publicUrl,
+        nombre: archivo.name
+      });
     }
     
     // Preparar datos a actualizar
     const datosActualizar = {
       notificado: notificado,
-      observaciones: observaciones || null
+      observaciones: observaciones || null,
+      archivo_url: archivosArray // Array completo con archivos viejos + nuevo
     };
-    
-    // Si hay nuevo archivo, agregarlo (reemplaza el anterior por ahora)
-    if (archivoUrl) {
-      datosActualizar.archivo_url = archivoUrl;
-      datosActualizar.nombre_archivo = nombreArchivo;
-    }
     
     // Actualizar en la base de datos
     const { error } = await supabaseClient
