@@ -1,11 +1,11 @@
 // ==========================================
-// SISTEMA LC - CONSULTA (NUEVO CON MODAL REDISEÑADO)
+// SISTEMA LC - CONSULTA (CON MOV/EXPTE)
 // ==========================================
 
 let causas = [];
 let causaEditando = null;
 let causaActualDetalle = null;
-let tabActual = 'extrajudicial';
+let tabActual = 'expte'; // Por defecto mov/expte
 let movimientosMostrados = 5;
 
 // ==========================================
@@ -142,7 +142,7 @@ function buscarCausas() {
 }
 
 // ==========================================
-// VER DETALLE (NUEVO MODAL REDISEÑADO)
+// VER DETALLE
 // ==========================================
 
 function verDetalle(id) {
@@ -155,6 +155,7 @@ function verDetalle(id) {
   llenarResumen(causa);
   llenarDatosCompletos(causa);
   
+  // Resetear expandible
   const detalleCompleto = document.getElementById('detalleCompleto');
   const btnExpandir = document.querySelector('.btn-expandir');
   if (detalleCompleto) {
@@ -165,7 +166,12 @@ function verDetalle(id) {
     btnExpandir.innerHTML = '+';
   }
   
-  cargarMovimientos();
+  // Por defecto mostrar mov/expte
+  tabActual = 'expte';
+  mostrarContenidoTab('expte');
+  
+  // Cargar movimientos expte
+  cargarMovimientosExpte();
   
   const modal = document.getElementById('modalDetalle');
   if (modal) {
@@ -294,116 +300,239 @@ function toggleExpandirDetalle() {
 }
 
 // ==========================================
-// TABS Y MOVIMIENTOS
+// TABS
 // ==========================================
 
-function cambiarTab(tab) {
+function cambiarTab(tab, btn) {
   tabActual = tab;
   
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('activo');
+  // Actualizar botones
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.remove('activo');
   });
-  event.target.classList.add('activo');
+  if (btn) btn.classList.add('activo');
   
-  movimientosMostrados = 5;
-  cargarMovimientos();
+  // Mostrar contenido correspondiente
+  mostrarContenidoTab(tab);
+  
+  // Cargar datos según la pestaña
+  if (tab === 'expte') {
+    cargarMovimientosExpte();
+  } else if (tab === 'extrajudicial') {
+    cargarMovimientos();
+  }
 }
 
-function cargarMovimientos() {
-  const timeline = document.getElementById('timelineMovimientos');
-  if (!timeline || !causaActualDetalle) return;
+function mostrarContenidoTab(tab) {
+  // Ocultar todos los contenidos
+  document.querySelectorAll('.contenido-tab').forEach(c => {
+    c.style.display = 'none';
+  });
   
-  let observaciones = '';
+  // Mostrar el seleccionado
+  const contenido = document.getElementById('contenido-' + tab);
+  if (contenido) {
+    contenido.style.display = 'block';
+  }
+}
+
+// ==========================================
+// MOV/EXPTE - NUEVO SISTEMA
+// ==========================================
+
+function mostrarFormExpte() {
+  const form = document.getElementById('formNuevoExpte');
+  if (!form) return;
   
-  switch(tabActual) {
-    case 'extrajudicial':
-      observaciones = causaActualDetalle.observaciones_fusion || '';
-      break;
-    case 'wsp':
-      observaciones = '';
-      break;
-    case 'mail':
-      observaciones = '';
-      break;
-    case 'expte':
-      observaciones = '';
-      break;
-    case 'mas':
-      observaciones = causaActualDetalle.observaciones || '';
-      break;
+  // Setear fecha actual
+  const fechaInput = document.getElementById('fechaMovExpte');
+  if (fechaInput) {
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    fechaInput.value = yyyy + '-' + mm + '-' + dd;
   }
   
-  if (!observaciones || observaciones.trim() === '') {
-    timeline.innerHTML = '<div class="sin-movimientos">No hay movimientos registrados</div>';
+  // Limpiar campos
+  document.getElementById('tipoMovExpte').value = '';
+  document.getElementById('archivoMovExpte').value = '';
+  document.getElementById('notificadoMovExpte').checked = false;
+  document.getElementById('observacionesMovExpte').value = '';
+  
+  form.style.display = 'block';
+}
+
+function cancelarFormExpte() {
+  const form = document.getElementById('formNuevoExpte');
+  if (form) {
+    form.style.display = 'none';
+  }
+}
+
+async function guardarMovExpte() {
+  if (!causaActualDetalle) return;
+  
+  const tipo = document.getElementById('tipoMovExpte').value;
+  const fecha = document.getElementById('fechaMovExpte').value;
+  const archivoInput = document.getElementById('archivoMovExpte');
+  const notificado = document.getElementById('notificadoMovExpte').checked;
+  const observaciones = document.getElementById('observacionesMovExpte').value.trim();
+  
+  if (!tipo) {
+    alert('Por favor selecciona un tipo de movimiento');
     return;
   }
   
-  const movimientos = parsearMovimientos(observaciones);
-  const movimientosAMostrar = movimientos.slice(0, movimientosMostrados);
-  
-  let html = '';
-  movimientosAMostrar.forEach((mov) => {
-    html += crearHtmlMovimiento(mov);
-  });
-  
-  timeline.innerHTML = html;
-}
-
-function parsearMovimientos(texto) {
-  if (!texto || texto.trim() === '') return [];
-  
-  // Detectar formato viejo (sin ##)
-  if (!texto.includes('##')) {
-    const hoy = new Date();
-    const dia = String(hoy.getDate()).padStart(2, '0');
-    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-    const anio = hoy.getFullYear();
-    return [{
-      fecha: dia + '/' + mes + '/' + anio,
-      texto: texto,
-      usuario: 'Histórico',
-      index: 0
-    }];
+  if (!fecha) {
+    alert('Por favor selecciona una fecha');
+    return;
   }
   
-  const movimientos = [];
-  // Usar || como separador de movimientos
-  const partes = texto.split('||').filter(function(p) { 
-    return p.trim() !== ''; 
-  });
-  
-  partes.forEach(function(parte, index) {
-    if (!parte.includes('##')) return;
+  try {
+    let archivoUrl = null;
+    let nombreArchivo = null;
     
-    const datos = parte.split('##');
-    movimientos.push({
-      fecha: datos[0] || '-',
-      texto: datos[1] || '',
-      usuario: datos[2] || 'Sistema',
-      index: index
-    });
-  });
-  
-  return movimientos.reverse();
+    // Subir archivo si hay
+    if (archivoInput.files.length > 0) {
+      const archivo = archivoInput.files[0];
+      nombreArchivo = archivo.name;
+      
+      // Validar tipo
+      const tiposPermitidos = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!tiposPermitidos.includes(archivo.type)) {
+        alert('Solo se permiten archivos PDF, JPG o PNG');
+        return;
+      }
+      
+      // Validar tamaño (máx 10MB)
+      if (archivo.size > 10 * 1024 * 1024) {
+        alert('El archivo no puede superar los 10MB');
+        return;
+      }
+      
+      // Subir a Storage
+      const fileName = Date.now() + '_' + archivo.name;
+      const { data: uploadData, error: uploadError } = await supabaseClient
+        .storage
+        .from('documentos-judiciales')
+        .upload(fileName, archivo);
+      
+      if (uploadError) throw uploadError;
+      
+      // Obtener URL pública
+      const { data: urlData } = supabaseClient
+        .storage
+        .from('documentos-judiciales')
+        .getPublicUrl(fileName);
+      
+      archivoUrl = urlData.publicUrl;
+    }
+    
+    // Guardar en tabla
+    const { error } = await supabaseClient
+      .from('movimientos_judiciales')
+      .insert({
+        causa_id: causaActualDetalle.id,
+        tipo_movimiento: tipo,
+        fecha: fecha,
+        notificado: notificado,
+        observaciones: observaciones || null,
+        archivo_url: archivoUrl,
+        nombre_archivo: nombreArchivo,
+        usuario: 'Lucia'
+      });
+    
+    if (error) throw error;
+    
+    // Cerrar formulario y recargar
+    cancelarFormExpte();
+    cargarMovimientosExpte();
+    
+    showSuccess('Movimiento guardado correctamente');
+    
+  } catch (err) {
+    console.error('Error al guardar:', err);
+    showError('Error al guardar el movimiento: ' + err.message);
+  }
 }
 
-function crearHtmlMovimiento(mov) {
-  return `
-    <div class="movimiento-item" data-index="${mov.index}">
-      <div class="movimiento-header">
-        <span class="movimiento-fecha">${mov.fecha}</span>
-        <div class="movimiento-acciones">
-          <button class="btn-icono btn-editar" onclick="editarMovimiento(${mov.index})" title="Editar">✏️</button>
-          <button class="btn-icono btn-eliminar" onclick="eliminarMovimiento(${mov.index})" title="Eliminar">🗑️</button>
+async function cargarMovimientosExpte() {
+  const timeline = document.getElementById('timelineExpte');
+  if (!timeline || !causaActualDetalle) return;
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('movimientos_judiciales')
+      .select('*')
+      .eq('causa_id', causaActualDetalle.id)
+      .order('fecha', { ascending: false })
+      .limit(movimientosMostrados);
+    
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      timeline.innerHTML = '<div class="sin-movimientos">No hay movimientos registrados</div>';
+      return;
+    }
+    
+    let html = '';
+    data.forEach(mov => {
+      html += crearHtmlMovExpte(mov);
+    });
+    
+    timeline.innerHTML = html;
+    
+  } catch (err) {
+    console.error('Error al cargar movimientos:', err);
+    timeline.innerHTML = '<div class="error">Error al cargar movimientos</div>';
+  }
+}
+
+function crearHtmlMovExpte(mov) {
+  const nombresTipos = {
+    'demanda_iniciada': 'Demanda iniciada',
+    'primer_decreto': 'Primer decreto',
+    'certificado_no_oposicion': 'Certificado de no oposición de excepciones',
+    'sentencia': 'Sentencia',
+    'ejecucion': 'Ejecución'
+  };
+  
+  const tipoNombre = nombresTipos[mov.tipo_movimiento] || mov.tipo_movimiento;
+  const fechaFormateada = new Date(mov.fecha).toLocaleDateString('es-AR');
+  
+  let html = `
+    <div class="mov-expte-item">
+      <div class="mov-expte-header">
+        <div>
+          <span class="mov-expte-tipo">${tipoNombre}</span>
+          <span class="mov-expte-notificado ${mov.notificado ? 'notificado-si' : 'notificado-no'}">
+            ${mov.notificado ? 'Notificado' : 'No notificado'}
+          </span>
         </div>
+        <span class="mov-expte-fecha">${fechaFormateada}</span>
       </div>
-      <div class="movimiento-texto" id="texto-mov-${mov.index}">${mov.texto}</div>
-    </div>
   `;
+  
+  if (mov.observaciones) {
+    html += `<div class="mov-expte-observaciones">${mov.observaciones}</div>`;
+  }
+  
+  if (mov.archivo_url) {
+    html += `
+      <a href="${mov.archivo_url}" target="_blank" class="mov-expte-archivo">
+        📎 ${mov.nombre_archivo || 'Ver archivo'}
+      </a>
+    `;
+  }
+  
+  html += '</div>';
+  
+  return html;
 }
 
 // ==========================================
-// NUEVO MOVIMIENTO
+// MOV. EXTRAJUDICIAL (SISTEMA ANTERIOR)
 // ==========================================
 
 function mostrarFormNuevo() {
@@ -449,12 +578,10 @@ async function guardarNuevoMovimiento() {
   const fecha = fechaEl.textContent;
   const usuario = 'Lucia';
   
-  // Nuevo formato: fecha##texto##usuario||
   const nuevoRegistro = fecha + '##' + texto + '##' + usuario + '||';
   
   let valorActual = causaActualDetalle.observaciones_fusion || '';
   
-  // Si el valor actual usa el formato viejo (termina en /), convertirlo
   if (valorActual.endsWith('/')) {
     valorActual = valorActual.replace(/\//g, '||');
   }
@@ -482,9 +609,78 @@ async function guardarNuevoMovimiento() {
   }
 }
 
-// ==========================================
-// EDITAR Y ELIMINAR MOVIMIENTOS
-// ==========================================
+function cargarMovimientos() {
+  const timeline = document.getElementById('timelineMovimientos');
+  if (!timeline || !causaActualDetalle) return;
+  
+  const observaciones = causaActualDetalle.observaciones_fusion || '';
+  
+  if (!observaciones.trim()) {
+    timeline.innerHTML = '<div class="sin-movimientos">No hay movimientos registrados</div>';
+    return;
+  }
+  
+  const movimientos = parsearMovimientos(observaciones);
+  const movimientosAMostrar = movimientos.slice(0, movimientosMostrados);
+  
+  let html = '';
+  movimientosAMostrar.forEach((mov) => {
+    html += crearHtmlMovimiento(mov);
+  });
+  
+  timeline.innerHTML = html;
+}
+
+function parsearMovimientos(texto) {
+  if (!texto || texto.trim() === '') return [];
+  
+  if (!texto.includes('##')) {
+    const hoy = new Date();
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const anio = hoy.getFullYear();
+    return [{
+      fecha: dia + '/' + mes + '/' + anio,
+      texto: texto,
+      usuario: 'Histórico',
+      index: 0
+    }];
+  }
+  
+  const movimientos = [];
+  const partes = texto.split('||').filter(function(p) { 
+    return p.trim() !== ''; 
+  });
+  
+  partes.forEach(function(parte, index) {
+    if (!parte.includes('##')) return;
+    
+    const datos = parte.split('##');
+    movimientos.push({
+      fecha: datos[0] || '-',
+      texto: datos[1] || '',
+      usuario: datos[2] || 'Sistema',
+      index: index
+    });
+  });
+  
+  return movimientos.reverse();
+}
+
+function crearHtmlMovimiento(mov) {
+  return `
+    <div class="movimiento-item" data-index="${mov.index}">
+      <div class="movimiento-header">
+        <span class="movimiento-fecha">${mov.fecha}</span>
+        <div class="movimiento-acciones">
+          <button class="btn-icono btn-editar" onclick="editarMovimiento(${mov.index})" title="Editar">✏️</button>
+          <button class="btn-icono btn-eliminar" onclick="eliminarMovimiento(${mov.index})" title="Eliminar">🗑️</button>
+        </div>
+      </div>
+      <div class="movimiento-texto" id="texto-mov-${mov.index}">${mov.texto}</div>
+    </div>
+  `;
+}
 
 function editarMovimiento(index) {
   const movimientoItem = document.querySelector('.movimiento-item[data-index="' + index + '"]');
@@ -597,7 +793,11 @@ async function eliminarMovimiento(index) {
 
 function cargarMasMovimientos() {
   movimientosMostrados += 5;
-  cargarMovimientos();
+  if (tabActual === 'expte') {
+    cargarMovimientosExpte();
+  } else if (tabActual === 'extrajudicial') {
+    cargarMovimientos();
+  }
 }
 
 // ==========================================
@@ -611,6 +811,7 @@ function cerrarModalDetalle() {
   }
   causaActualDetalle = null;
   cancelarNuevo();
+  cancelarFormExpte();
 }
 
 function editarDesdeDetalle() {
@@ -813,3 +1014,6 @@ window.cancelarEdicionMovimiento = cancelarEdicionMovimiento;
 window.guardarEdicionMovimiento = guardarEdicionMovimiento;
 window.eliminarMovimiento = eliminarMovimiento;
 window.cargarMasMovimientos = cargarMasMovimientos;
+window.mostrarFormExpte = mostrarFormExpte;
+window.cancelarFormExpte = cancelarFormExpte;
+window.guardarMovExpte = guardarMovExpte;
