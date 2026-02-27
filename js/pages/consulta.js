@@ -7,6 +7,7 @@ let causaEditando = null;
 let causaActualDetalle = null;
 let tabActual = 'expte'; // Por defecto mov/expte
 let movimientosMostrados = 5;
+let movimientoEditandoId = null; // Variable global para saber qué movimiento se está editando
 
 // ==========================================
 // CARGAR CAUSAS
@@ -873,6 +874,7 @@ function cerrarModalDetalle() {
     modal.style.display = 'none';
   }
   causaActualDetalle = null;
+  movimientoEditandoId = null; // Limpiar variable global
   cancelarNuevo();
   cancelarFormExpte();
 }
@@ -1059,6 +1061,8 @@ async function limpiarTodasLasCausas() {
 
 function editarMovExpte(id) {
   console.log('Editando movimiento:', id);
+  movimientoEditandoId = id; // Guardar en variable global
+  
   // Ocultar contenido y mostrar formulario
   const contenido = document.getElementById('contenido-mov-' + id);
   const form = document.getElementById('form-edit-' + id);
@@ -1072,6 +1076,8 @@ function editarMovExpte(id) {
 
 function cancelarEdicionMovExpte(id) {
   console.log('Cancelando edición:', id);
+  movimientoEditandoId = null; // Limpiar variable global
+  
   // Mostrar contenido y ocultar formulario
   const contenido = document.getElementById('contenido-mov-' + id);
   const form = document.getElementById('form-edit-' + id);
@@ -1084,16 +1090,41 @@ function cancelarEdicionMovExpte(id) {
 }
 
 async function guardarEdicionMovExpte(id) {
-  console.log('Guardando edición:', id);
+  console.log('Guardando edición, ID recibido:', id, 'Variable global:', movimientoEditandoId);
   
-  const notificado = document.getElementById('edit-notif-' + id).checked;
-  const observaciones = document.getElementById('edit-obs-' + id).value.trim();
-  const archivoInput = document.getElementById('edit-arch-' + id);
+  // Usar el ID que se pasó como parámetro (debería ser el correcto)
+  const movId = id || movimientoEditandoId;
   
-  console.log('Valores a guardar:', { notificado, observaciones, tieneArchivo: archivoInput && archivoInput.files.length > 0 });
+  if (!movId) {
+    console.error('No se pudo determinar el ID del movimiento a editar');
+    showError('Error: No se pudo identificar el movimiento');
+    return;
+  }
+  
+  // Obtener elementos del DOM usando el ID correcto
+  const notifCheckbox = document.getElementById('edit-notif-' + movId);
+  const obsTextarea = document.getElementById('edit-obs-' + movId);
+  const archivoInput = document.getElementById('edit-arch-' + movId);
+  
+  console.log('Elementos encontrados:', {
+    notifCheckbox: !!notifCheckbox,
+    obsTextarea: !!obsTextarea,
+    archivoInput: !!archivoInput
+  });
+  
+  if (!notifCheckbox || !obsTextarea) {
+    console.error('No se encontraron los elementos del formulario para el ID:', movId);
+    showError('Error: No se pudo acceder al formulario');
+    return;
+  }
+  
+  const notificado = notifCheckbox.checked;
+  const observaciones = obsTextarea.value.trim();
+  
+  console.log('Valores leídos del DOM:', { notificado, observaciones });
   
   // Mostrar indicador de carga
-  const btnGuardar = document.querySelector(`#form-edit-${id} .btn-guardar-edicion`);
+  const btnGuardar = document.querySelector(`#form-edit-${movId} .btn-guardar-edicion`);
   const textoOriginal = btnGuardar ? btnGuardar.innerHTML : '💾';
   if (btnGuardar) {
     btnGuardar.innerHTML = '⏳';
@@ -1106,7 +1137,7 @@ async function guardarEdicionMovExpte(id) {
     const { data: movActual, error: errorConsulta } = await supabaseClient
       .from('movimientos_judiciales')
       .select('archivo_url')
-      .eq('id', id)
+      .eq('id', movId)
       .single();
     
     if (errorConsulta) {
@@ -1188,7 +1219,7 @@ async function guardarEdicionMovExpte(id) {
     const { error } = await supabaseClient
       .from('movimientos_judiciales')
       .update(datosActualizar)
-      .eq('id', id);
+      .eq('id', movId);
     
     if (error) {
       console.error('Error actualizando BD:', error);
@@ -1196,9 +1227,10 @@ async function guardarEdicionMovExpte(id) {
     }
     
     console.log('Actualización exitosa');
+    movimientoEditandoId = null; // Limpiar variable global
     
     // Cerrar formulario de edición ANTES de recargar
-    cancelarEdicionMovExpte(id);
+    cancelarEdicionMovExpte(movId);
     
     // Recargar movimientos
     await cargarMovimientosExpte();
@@ -1226,7 +1258,7 @@ async function eliminarMovExpte(id) {
   }
   
   try {
-    console.log('Ejecutando DELETE en Supabase...');
+    console.log('Ejecutando DELETE en Supabase para ID:', id);
     const { error } = await supabaseClient
       .from('movimientos_judiciales')
       .delete()
