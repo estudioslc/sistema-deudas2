@@ -502,31 +502,50 @@ function crearHtmlMovExpte(mov) {
   const fechaFormateada = new Date(mov.fecha).toLocaleDateString('es-AR');
   
   let html = `
-    <div class="mov-expte-item">
+    <div class="mov-expte-item" id="mov-expte-${mov.id}">
       <div class="mov-expte-header">
         <div>
           <span class="mov-expte-tipo">${tipoNombre}</span>
-          <span class="mov-expte-notificado ${mov.notificado ? 'notificado-si' : 'notificado-no'}">
+          <span class="mov-expte-notificado ${mov.notificado ? 'notificado-si' : 'notificado-no'}" id="notif-badge-${mov.id}">
             ${mov.notificado ? 'Notificado' : 'No notificado'}
           </span>
         </div>
-        <span class="mov-expte-fecha">${fechaFormateada}</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="mov-expte-fecha">${fechaFormateada}</span>
+          <button class="btn-icono btn-editar" onclick="editarMovExpte(${mov.id})" title="Editar">✏️</button>
+          <button class="btn-icono btn-eliminar" onclick="eliminarMovExpte(${mov.id})" title="Eliminar">🗑️</button>
+        </div>
       </div>
+      
+      <div id="contenido-mov-${mov.id}">
+        ${mov.observaciones ? `<div class="mov-expte-observaciones" id="obs-text-${mov.id}">${mov.observaciones}</div>` : ''}
+        ${mov.archivo_url ? `
+          <a href="${mov.archivo_url}" target="_blank" class="mov-expte-archivo" id="arch-link-${mov.id}">
+            📎 ${mov.nombre_archivo || 'Ver archivo'}
+          </a>
+        ` : ''}
+      </div>
+      
+      <div id="form-edit-${mov.id}" style="display: none; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Notificado:</label>
+          <input type="checkbox" id="edit-notif-${mov.id}" ${mov.notificado ? 'checked' : ''} style="margin-left: 8px;">
+        </div>
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Observaciones:</label>
+          <textarea id="edit-obs-${mov.id}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-height: 50px; resize: vertical;">${mov.observaciones || ''}</textarea>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Agregar documento adicional:</label>
+          <input type="file" id="edit-arch-${mov.id}" accept=".pdf,.jpg,.jpeg,.png" style="margin-top: 4px; font-size: 12px;">
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn-icono btn-guardar-edicion" onclick="guardarEdicionMovExpte(${mov.id})" title="Guardar">💾</button>
+          <button class="btn-icono btn-cancelar" onclick="cancelarEdicionMovExpte(${mov.id})" title="Cancelar">❌</button>
+        </div>
+      </div>
+    </div>
   `;
-  
-  if (mov.observaciones) {
-    html += `<div class="mov-expte-observaciones">${mov.observaciones}</div>`;
-  }
-  
-  if (mov.archivo_url) {
-    html += `
-      <a href="${mov.archivo_url}" target="_blank" class="mov-expte-archivo">
-        📎 ${mov.nombre_archivo || 'Ver archivo'}
-      </a>
-    `;
-  }
-  
-  html += '</div>';
   
   return html;
 }
@@ -991,6 +1010,118 @@ async function limpiarTodasLasCausas() {
 }
 
 // ==========================================
+// EDITAR Y ELIMINAR MOV/EXPTE
+// ==========================================
+
+function editarMovExpte(id) {
+  // Ocultar contenido y mostrar formulario
+  document.getElementById('contenido-mov-' + id).style.display = 'none';
+  document.getElementById('form-edit-' + id).style.display = 'block';
+}
+
+function cancelarEdicionMovExpte(id) {
+  // Mostrar contenido y ocultar formulario
+  document.getElementById('contenido-mov-' + id).style.display = 'block';
+  document.getElementById('form-edit-' + id).style.display = 'none';
+}
+
+async function guardarEdicionMovExpte(id) {
+  const notificado = document.getElementById('edit-notif-' + id).checked;
+  const observaciones = document.getElementById('edit-obs-' + id).value.trim();
+  const archivoInput = document.getElementById('edit-arch-' + id);
+  
+  try {
+    let archivoUrl = null;
+    let nombreArchivo = null;
+    
+    // Si hay nuevo archivo, subirlo
+    if (archivoInput.files.length > 0) {
+      const archivo = archivoInput.files[0];
+      
+      // Validar tipo
+      const tiposPermitidos = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!tiposPermitidos.includes(archivo.type)) {
+        alert('Solo se permiten archivos PDF, JPG o PNG');
+        return;
+      }
+      
+      // Validar tamaño (máx 10MB)
+      if (archivo.size > 10 * 1024 * 1024) {
+        alert('El archivo no puede superar los 10MB');
+        return;
+      }
+      
+      // Subir a Storage
+      const fileName = Date.now() + '_' + archivo.name;
+      const { data: uploadData, error: uploadError } = await supabaseClient
+        .storage
+        .from('documentos-judiciales')
+        .upload(fileName, archivo);
+      
+      if (uploadError) throw uploadError;
+      
+      // Obtener URL pública
+      const { data: urlData } = supabaseClient
+        .storage
+        .from('documentos-judiciales')
+        .getPublicUrl(fileName);
+      
+      archivoUrl = urlData.publicUrl;
+      nombreArchivo = archivo.name;
+    }
+    
+    // Preparar datos a actualizar
+    const datosActualizar = {
+      notificado: notificado,
+      observaciones: observaciones || null
+    };
+    
+    // Si hay nuevo archivo, agregarlo (reemplaza el anterior por ahora)
+    if (archivoUrl) {
+      datosActualizar.archivo_url = archivoUrl;
+      datosActualizar.nombre_archivo = nombreArchivo;
+    }
+    
+    // Actualizar en la base de datos
+    const { error } = await supabaseClient
+      .from('movimientos_judiciales')
+      .update(datosActualizar)
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    // Recargar movimientos
+    cargarMovimientosExpte();
+    
+    showSuccess('Movimiento actualizado correctamente');
+    
+  } catch (err) {
+    console.error('Error al actualizar:', err);
+    showError('Error al actualizar el movimiento: ' + err.message);
+  }
+}
+
+async function eliminarMovExpte(id) {
+  if (!confirm('¿Estás seguro de eliminar este movimiento?')) return;
+  
+  try {
+    const { error } = await supabaseClient
+      .from('movimientos_judiciales')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    cargarMovimientosExpte();
+    showSuccess('Movimiento eliminado correctamente');
+    
+  } catch (err) {
+    console.error('Error al eliminar:', err);
+    showError('Error al eliminar el movimiento: ' + err.message);
+  }
+}
+
+// ==========================================
 // EXPONER FUNCIONES AL SCOPE GLOBAL
 // ==========================================
 
@@ -1017,3 +1148,7 @@ window.cargarMasMovimientos = cargarMasMovimientos;
 window.mostrarFormExpte = mostrarFormExpte;
 window.cancelarFormExpte = cancelarFormExpte;
 window.guardarMovExpte = guardarMovExpte;
+window.editarMovExpte = editarMovExpte;
+window.cancelarEdicionMovExpte = cancelarEdicionMovExpte;
+window.guardarEdicionMovExpte = guardarEdicionMovExpte;
+window.eliminarMovExpte = eliminarMovExpte;
