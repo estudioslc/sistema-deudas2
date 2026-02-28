@@ -391,26 +391,22 @@ async function guardarMovExpte() {
   }
   
   try {
-    let archivosArray = []; // Ahora es un array de objetos {url, nombre}
+    let archivosArray = [];
     
-    // Subir archivo si hay
     if (archivoInput.files.length > 0) {
       const archivo = archivoInput.files[0];
       
-      // Validar tipo
       const tiposPermitidos = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
       if (!tiposPermitidos.includes(archivo.type)) {
         alert('Solo se permiten archivos PDF, JPG o PNG');
         return;
       }
       
-      // Validar tamaño (máx 10MB)
       if (archivo.size > 10 * 1024 * 1024) {
         alert('El archivo no puede superar los 10MB');
         return;
       }
       
-      // Subir a Storage
       const fileName = Date.now() + '_' + archivo.name;
       const { data: uploadData, error: uploadError } = await supabaseClient
         .storage
@@ -419,20 +415,17 @@ async function guardarMovExpte() {
       
       if (uploadError) throw uploadError;
       
-      // Obtener URL pública
       const { data: urlData } = supabaseClient
         .storage
         .from('documentos-judiciales')
         .getPublicUrl(fileName);
       
-      // Agregar al array de archivos
       archivosArray.push({
         url: urlData.publicUrl,
         nombre: archivo.name
       });
     }
     
-    // Guardar en tabla - ahora archivo_url es un array JSON
     const { error } = await supabaseClient
       .from('movimientos_judiciales')
       .insert({
@@ -441,13 +434,12 @@ async function guardarMovExpte() {
         fecha: fecha,
         notificado: notificado,
         observaciones: observaciones || null,
-        archivo_url: archivosArray, // Array de objetos {url, nombre}
+        archivo_url: archivosArray,
         usuario: 'Lucia'
       });
     
     if (error) throw error;
     
-    // Cerrar formulario y recargar
     cancelarFormExpte();
     cargarMovimientosExpte();
     
@@ -463,8 +455,6 @@ async function cargarMovimientosExpte() {
   const timeline = document.getElementById('timelineExpte');
   if (!timeline || !causaActualDetalle) return;
   
-  console.log('Recargando movimientos para causa:', causaActualDetalle.id);
-  
   try {
     const { data, error } = await supabaseClient
       .from('movimientos_judiciales')
@@ -475,22 +465,10 @@ async function cargarMovimientosExpte() {
     
     if (error) throw error;
     
-    console.log('Datos recibidos de Supabase:', data);
-    
     if (!data || data.length === 0) {
       timeline.innerHTML = '<div class="sin-movimientos">No hay movimientos registrados</div>';
       return;
     }
-    
-    // Log específico para cada movimiento
-    data.forEach(mov => {
-      console.log(`Movimiento ${mov.id}:`, {
-        notificado: mov.notificado,
-        archivos: mov.archivo_url,
-        tipoArchivo: typeof mov.archivo_url,
-        esArray: Array.isArray(mov.archivo_url)
-      });
-    });
     
     let html = '';
     data.forEach(mov => {
@@ -507,15 +485,12 @@ async function cargarMovimientosExpte() {
 
 // Función auxiliar para obtener array de archivos desde cualquier formato
 function obtenerArchivosArray(mov) {
-  // Si es null o undefined, retornar array vacío
   if (!mov.archivo_url) return [];
   
-  // Si ya es array, usarlo directamente
   if (Array.isArray(mov.archivo_url)) {
     return mov.archivo_url;
   }
   
-  // Si es string (formato viejo), convertir a array
   if (typeof mov.archivo_url === 'string' && mov.archivo_url.trim() !== '') {
     return [{
       url: mov.archivo_url,
@@ -523,9 +498,7 @@ function obtenerArchivosArray(mov) {
     }];
   }
   
-  // Si es objeto JSON de Supabase
   if (typeof mov.archivo_url === 'object') {
-    // Podría ser un objeto con {url, nombre} o un array
     if (mov.archivo_url.url) {
       return [mov.archivo_url];
     }
@@ -533,6 +506,52 @@ function obtenerArchivosArray(mov) {
   }
   
   return [];
+}
+
+// ==========================================
+// FIX: Eliminar archivo adjunto individual
+// ==========================================
+
+async function eliminarArchivoAdjunto(movId, archivoIndex) {
+  if (!confirm('¿Estás seguro de eliminar este archivo adjunto?')) return;
+  
+  try {
+    // Obtener registro actual
+    const { data: movActual, error: errorConsulta } = await supabaseClient
+      .from('movimientos_judiciales')
+      .select('archivo_url')
+      .eq('id', movId)
+      .single();
+    
+    if (errorConsulta) throw errorConsulta;
+    
+    let archivos = obtenerArchivosArray(movActual);
+    
+    // Quitar el archivo en el índice indicado
+    archivos.splice(archivoIndex, 1);
+    
+    // Guardar array actualizado
+    const { error } = await supabaseClient
+      .from('movimientos_judiciales')
+      .update({ archivo_url: archivos })
+      .eq('id', movId);
+    
+    if (error) throw error;
+    
+    // Recargar sin cerrar el formulario de edición si está abierto
+    await cargarMovimientosExpte();
+    
+    // Si el formulario de edición estaba abierto, reabrirlo
+    if (movimientoEditandoId === movId) {
+      editarMovExpte(movId);
+    }
+    
+    showSuccess('Archivo eliminado correctamente');
+    
+  } catch (err) {
+    console.error('Error al eliminar archivo:', err);
+    showError('Error al eliminar el archivo: ' + err.message);
+  }
 }
 
 function crearHtmlMovExpte(mov) {
@@ -547,21 +566,52 @@ function crearHtmlMovExpte(mov) {
   const tipoNombre = nombresTipos[mov.tipo_movimiento] || mov.tipo_movimiento;
   const fechaFormateada = new Date(mov.fecha).toLocaleDateString('es-AR');
   
-  // Obtener array de archivos (soporta formato viejo y nuevo)
   const archivos = obtenerArchivosArray(mov);
   
-  // Generar HTML de archivos (todos en línea)
+  // FIX: Archivos con botón de eliminación
   let archivosHtml = '';
   if (archivos.length > 0) {
     archivosHtml = '<div class="archivos-container" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">';
     archivos.forEach((arch, index) => {
       archivosHtml += `
-        <a href="${arch.url}" target="_blank" class="mov-expte-archivo" title="${arch.nombre || 'Ver archivo'}">
-          📎 ${arch.nombre || 'Archivo ' + (index + 1)}
-        </a>
+        <div style="display: inline-flex; align-items: center; gap: 4px; background: #E3F2FD; border-radius: 4px; padding: 4px 8px;">
+          <a href="${arch.url}" target="_blank" class="mov-expte-archivo" style="margin: 0; padding: 0; background: none;" title="${arch.nombre || 'Ver archivo'}">
+            📎 ${arch.nombre || 'Archivo ' + (index + 1)}
+          </a>
+          <button 
+            onclick="eliminarArchivoAdjunto(${mov.id}, ${index})" 
+            title="Eliminar este archivo"
+            style="background: none; border: none; cursor: pointer; color: #f44336; font-size: 14px; padding: 0 2px; line-height: 1;"
+          >✕</button>
+        </div>
       `;
     });
     archivosHtml += '</div>';
+  }
+
+  // FIX: En el formulario de edición también mostramos archivos con botón eliminar
+  let archivosEnFormHtml = '';
+  if (archivos.length > 0) {
+    archivosEnFormHtml = `
+      <div style="margin-bottom: 8px;">
+        <label style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Archivos adjuntos actuales:</label>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+    `;
+    archivos.forEach((arch, index) => {
+      archivosEnFormHtml += `
+        <div style="display: inline-flex; align-items: center; gap: 4px; background: #E3F2FD; border-radius: 4px; padding: 4px 8px;">
+          <a href="${arch.url}" target="_blank" style="font-size: 12px; color: #1976D2; text-decoration: none;">
+            📎 ${arch.nombre || 'Archivo ' + (index + 1)}
+          </a>
+          <button 
+            onclick="eliminarArchivoAdjunto(${mov.id}, ${index})" 
+            title="Eliminar este archivo"
+            style="background: none; border: none; cursor: pointer; color: #f44336; font-size: 14px; padding: 0 2px; line-height: 1;"
+          >✕</button>
+        </div>
+      `;
+    });
+    archivosEnFormHtml += '</div></div>';
   }
   
   let html = `
@@ -594,6 +644,7 @@ function crearHtmlMovExpte(mov) {
           <label style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Observaciones:</label>
           <textarea id="edit-obs-${mov.id}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-height: 50px; resize: vertical;">${mov.observaciones || ''}</textarea>
         </div>
+        ${archivosEnFormHtml}
         <div style="margin-bottom: 8px;">
           <label style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Agregar documento adicional:</label>
           <input type="file" id="edit-arch-${mov.id}" accept=".pdf,.jpg,.jpeg,.png" style="margin-top: 4px; font-size: 12px;">
@@ -888,7 +939,7 @@ function cerrarModalDetalle() {
     modal.style.display = 'none';
   }
   causaActualDetalle = null;
-  movimientoEditandoId = null; // Limpiar variable global
+  movimientoEditandoId = null;
   cancelarNuevo();
   cancelarFormExpte();
 }
@@ -1074,60 +1125,42 @@ async function limpiarTodasLasCausas() {
 // ==========================================
 
 function editarMovExpte(id) {
-  console.log('Editando movimiento:', id);
-  movimientoEditandoId = id; // Guardar en variable global
+  movimientoEditandoId = id;
   
-  // Ocultar contenido y mostrar formulario
   const contenido = document.getElementById('contenido-mov-' + id);
   const form = document.getElementById('form-edit-' + id);
   if (contenido) contenido.style.display = 'none';
   if (form) form.style.display = 'block';
   
-  // Limpiar el input de archivo al abrir edición
   const archivoInput = document.getElementById('edit-arch-' + id);
   if (archivoInput) archivoInput.value = '';
 }
 
 function cancelarEdicionMovExpte(id) {
-  console.log('Cancelando edición:', id);
-  movimientoEditandoId = null; // Limpiar variable global
+  movimientoEditandoId = null;
   
-  // Mostrar contenido y ocultar formulario
   const contenido = document.getElementById('contenido-mov-' + id);
   const form = document.getElementById('form-edit-' + id);
   if (contenido) contenido.style.display = 'block';
   if (form) form.style.display = 'none';
   
-  // Limpiar input de archivo al cancelar
   const archivoInput = document.getElementById('edit-arch-' + id);
   if (archivoInput) archivoInput.value = '';
 }
 
 async function guardarEdicionMovExpte(id) {
-  console.log('Guardando edición, ID recibido:', id, 'Variable global:', movimientoEditandoId);
-  
-  // Usar el ID que se pasó como parámetro (debería ser el correcto)
   const movId = id || movimientoEditandoId;
   
   if (!movId) {
-    console.error('No se pudo determinar el ID del movimiento a editar');
     showError('Error: No se pudo identificar el movimiento');
     return;
   }
   
-  // Obtener elementos del DOM usando el ID correcto
   const notifCheckbox = document.getElementById('edit-notif-' + movId);
   const obsTextarea = document.getElementById('edit-obs-' + movId);
   const archivoInput = document.getElementById('edit-arch-' + movId);
   
-  console.log('Elementos encontrados:', {
-    notifCheckbox: !!notifCheckbox,
-    obsTextarea: !!obsTextarea,
-    archivoInput: !!archivoInput
-  });
-  
   if (!notifCheckbox || !obsTextarea) {
-    console.error('No se encontraron los elementos del formulario para el ID:', movId);
     showError('Error: No se pudo acceder al formulario');
     return;
   }
@@ -1135,9 +1168,6 @@ async function guardarEdicionMovExpte(id) {
   const notificado = notifCheckbox.checked;
   const observaciones = obsTextarea.value.trim();
   
-  console.log('Valores leídos del DOM:', { notificado, observaciones });
-  
-  // Mostrar indicador de carga
   const btnGuardar = document.querySelector(`#form-edit-${movId} .btn-guardar-edicion`);
   const textoOriginal = btnGuardar ? btnGuardar.innerHTML : '💾';
   if (btnGuardar) {
@@ -1146,120 +1176,72 @@ async function guardarEdicionMovExpte(id) {
   }
   
   try {
-    // Primero obtener el registro actual para saber qué archivos ya tiene
-    console.log('Consultando registro actual...');
     const { data: movActual, error: errorConsulta } = await supabaseClient
       .from('movimientos_judiciales')
-      .select('*') // Seleccionar todo, no solo archivo_url
+      .select('*')
       .eq('id', movId)
       .single();
     
-    if (errorConsulta) {
-      console.error('Error consultando registro:', errorConsulta);
-      throw errorConsulta;
-    }
+    if (errorConsulta) throw errorConsulta;
     
-    console.log('Registro actual:', movActual);
-    
-    // Obtener array actual de archivos
     let archivosArray = obtenerArchivosArray(movActual);
-    console.log('Archivos existentes:', archivosArray);
     
-    // Si hay nuevo archivo, subirlo y agregarlo al array
     if (archivoInput && archivoInput.files.length > 0) {
-      console.log('Subiendo nuevo archivo...');
       const archivo = archivoInput.files[0];
       
-      // Validar tipo
       const tiposPermitidos = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
       if (!tiposPermitidos.includes(archivo.type)) {
         alert('Solo se permiten archivos PDF, JPG o PNG');
-        if (btnGuardar) {
-          btnGuardar.innerHTML = textoOriginal;
-          btnGuardar.disabled = false;
-        }
+        if (btnGuardar) { btnGuardar.innerHTML = textoOriginal; btnGuardar.disabled = false; }
         return;
       }
       
-      // Validar tamaño (máx 10MB)
       if (archivo.size > 10 * 1024 * 1024) {
         alert('El archivo no puede superar los 10MB');
-        if (btnGuardar) {
-          btnGuardar.innerHTML = textoOriginal;
-          btnGuardar.disabled = false;
-        }
+        if (btnGuardar) { btnGuardar.innerHTML = textoOriginal; btnGuardar.disabled = false; }
         return;
       }
       
-      // Subir a Storage
       const fileName = Date.now() + '_' + archivo.name;
-      const { data: uploadData, error: uploadError } = await supabaseClient
+      const { error: uploadError } = await supabaseClient
         .storage
         .from('documentos-judiciales')
         .upload(fileName, archivo);
       
-      if (uploadError) {
-        console.error('Error subiendo archivo:', uploadError);
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
       
-      // Obtener URL pública
       const { data: urlData } = supabaseClient
         .storage
         .from('documentos-judiciales')
         .getPublicUrl(fileName);
       
-      console.log('Archivo subido:', urlData.publicUrl);
-      
-      // Agregar el nuevo archivo al array existente (NO reemplazar)
       archivosArray.push({
         url: urlData.publicUrl,
         nombre: archivo.name
       });
-      
-      console.log('Array actualizado:', archivosArray);
     }
     
-    // Preparar datos a actualizar
-    const datosActualizar = {
-      notificado: notificado,
-      observaciones: observaciones || null,
-      archivo_url: archivosArray // Array completo con archivos viejos + nuevo
-    };
-    
-    console.log('Datos a actualizar:', datosActualizar);
-    
-    // Actualizar en la base de datos
     const { error } = await supabaseClient
       .from('movimientos_judiciales')
-      .update(datosActualizar)
+      .update({
+        notificado: notificado,
+        observaciones: observaciones || null,
+        archivo_url: archivosArray
+      })
       .eq('id', movId);
     
-    if (error) {
-      console.error('Error actualizando BD:', error);
-      throw error;
-    }
+    if (error) throw error;
     
-    console.log('Actualización exitosa');
-    movimientoEditandoId = null; // Limpiar variable global
+    movimientoEditandoId = null;
     
-    // Cerrar formulario de edición ANTES de recargar
-    cancelarEdicionMovExpte(movId);
-    
-    // ESPERAR 500ms antes de recargar para que Supabase propague los cambios
-    console.log('Esperando 500ms para propagación de datos...');
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Recargar movimientos
     await cargarMovimientosExpte();
     
     showSuccess('Movimiento actualizado correctamente');
     
   } catch (err) {
-    console.error('Error completo:', err);
+    console.error('Error:', err);
     showError('Error al actualizar el movimiento: ' + err.message);
   } finally {
-    // Restaurar botón
     if (btnGuardar) {
       btnGuardar.innerHTML = textoOriginal;
       btnGuardar.disabled = false;
@@ -1268,26 +1250,16 @@ async function guardarEdicionMovExpte(id) {
 }
 
 async function eliminarMovExpte(id) {
-  console.log('Eliminando movimiento:', id);
-  
-  if (!confirm('¿Estás seguro de eliminar este movimiento?')) {
-    console.log('Eliminación cancelada por el usuario');
-    return;
-  }
+  if (!confirm('¿Estás seguro de eliminar este movimiento?')) return;
   
   try {
-    console.log('Ejecutando DELETE en Supabase para ID:', id);
     const { error } = await supabaseClient
       .from('movimientos_judiciales')
       .delete()
       .eq('id', id);
     
-    if (error) {
-      console.error('Error de Supabase:', error);
-      throw error;
-    }
+    if (error) throw error;
     
-    console.log('Eliminación exitosa, recargando...');
     await cargarMovimientosExpte();
     showSuccess('Movimiento eliminado correctamente');
     
@@ -1328,3 +1300,4 @@ window.editarMovExpte = editarMovExpte;
 window.cancelarEdicionMovExpte = cancelarEdicionMovExpte;
 window.guardarEdicionMovExpte = guardarEdicionMovExpte;
 window.eliminarMovExpte = eliminarMovExpte;
+window.eliminarArchivoAdjunto = eliminarArchivoAdjunto;
