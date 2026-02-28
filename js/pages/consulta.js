@@ -463,6 +463,8 @@ async function cargarMovimientosExpte() {
   const timeline = document.getElementById('timelineExpte');
   if (!timeline || !causaActualDetalle) return;
   
+  console.log('Recargando movimientos para causa:', causaActualDetalle.id);
+  
   try {
     const { data, error } = await supabaseClient
       .from('movimientos_judiciales')
@@ -473,10 +475,22 @@ async function cargarMovimientosExpte() {
     
     if (error) throw error;
     
+    console.log('Datos recibidos de Supabase:', data);
+    
     if (!data || data.length === 0) {
       timeline.innerHTML = '<div class="sin-movimientos">No hay movimientos registrados</div>';
       return;
     }
+    
+    // Log específico para cada movimiento
+    data.forEach(mov => {
+      console.log(`Movimiento ${mov.id}:`, {
+        notificado: mov.notificado,
+        archivos: mov.archivo_url,
+        tipoArchivo: typeof mov.archivo_url,
+        esArray: Array.isArray(mov.archivo_url)
+      });
+    });
     
     let html = '';
     data.forEach(mov => {
@@ -1136,7 +1150,7 @@ async function guardarEdicionMovExpte(id) {
     console.log('Consultando registro actual...');
     const { data: movActual, error: errorConsulta } = await supabaseClient
       .from('movimientos_judiciales')
-      .select('archivo_url')
+      .select('*') // Seleccionar todo, no solo archivo_url
       .eq('id', movId)
       .single();
     
@@ -1231,6 +1245,10 @@ async function guardarEdicionMovExpte(id) {
     
     // Cerrar formulario de edición ANTES de recargar
     cancelarEdicionMovExpte(movId);
+    
+    // ESPERAR 500ms antes de recargar para que Supabase propague los cambios
+    console.log('Esperando 500ms para propagación de datos...');
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Recargar movimientos
     await cargarMovimientosExpte();
