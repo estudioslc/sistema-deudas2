@@ -423,3 +423,19 @@ input[type=file] {
 }
 
 /*# sourceMappingURL=styles.css.map */
+
+/* Header reorganizado - menú izquierda, título derecha */
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-nav {
+    margin-top: 0;
+}
+
+.header-title {
+    font-size: 20px;
+    margin: 0;
+}
