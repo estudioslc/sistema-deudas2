@@ -1,0 +1,72 @@
+// ==========================================
+// NAVEGACIÓN
+// ==========================================
+
+.header {
+  @include glass-effect(0.1, 10px);
+  padding: $espaciado-lg;
+  color: white;
+  
+  // Versión clara (para páginas internas)
+  &.header-light {
+    background: white;
+    color: #333;
+    border-radius: $radio-lg;
+    box-shadow: $sombra-sm;
+    margin-bottom: $espaciado-lg;
+  }
+}
+
+.nav {
+  display: flex;
+  gap: $espaciado-sm;
+  margin-top: $espaciado-md;
+  flex-wrap: wrap;
+  
+  a {
+    padding: 12px 24px;
+    text-decoration: none;
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: $radio-md;
+    transition: $transicion-normal;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    &.active {
+      background: rgba(255, 255, 255, 0.4);
+    }
+  }
+  
+  // Versión clara
+  .header-light & {
+    a {
+      color: #333;
+      background: #e0e0e0;
+      border: none;
+      
+      &:hover {
+        background: $color-primario;
+        color: white;
+      }
+      
+      &.active {
+        background: $color-primario;
+        color: white;
+      }
+    }
+  }
+}
+
+// Footer
+.footer {
+  background: rgba(0, 0, 0, 0.2);
+  color: white;
+  text-align: center;
+  padding: $espaciado-lg;
+  font-size: 14px;
+}

@@ -1,0 +1,34 @@
+// ==========================================
+// SISTEMA LC - ESTILOS PRINCIPALES
+// Compilar a: css/styles.css
+// ==========================================
+
+// 1. Variables y mixins (primero)
+@import 'variables';
+@import 'mixins';
+
+// 2. Reset y base
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: $fuente-principal;
+  min-height: 100vh;
+  background: $gradiente-principal;
+  @include flex-column;
+}
+
+// 3. Componentes
+@import 'components/botones';
+@import 'components/tarjetas';
+@import 'components/tablas';
+@import 'components/navegacion';
+@import 'components/estados';
+@import 'components/utilidades';
+
+// 4. Estilos específicos de páginas (opcional, se pueden importar por separado)
+// @import 'pages/carga';
+// @import 'pages/consulta';

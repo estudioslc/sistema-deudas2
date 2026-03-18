@@ -1,0 +1,63 @@
+// ==========================================
+// UTILIDADES
+// ==========================================
+
+// Loading spinner
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid $color-primario;
+  border-radius: 50%;
+  @include animacion-spin;
+  margin-left: $espaciado-sm;
+}
+
+.cargando-texto {
+  color: #666;
+  font-size: 14px;
+  margin-top: $espaciado-sm;
+}
+
+// Logo
+.logo {
+  font-size: 64px;
+  margin-bottom: $espaciado-lg;
+}
+
+// Títulos
+h1 {
+  color: #333;
+  font-size: 42px;
+  margin-bottom: $espaciado-sm;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 20px;
+  margin-bottom: $espaciado-xl;
+}
+
+// Input file
+input[type="file"] {
+  padding: $espaciado-sm;
+  border: 2px dashed #ccc;
+  border-radius: $radio-sm;
+  width: 100%;
+  max-width: 400px;
+}
+
+// Container principal
+.main {
+  flex: 1;
+  @include flex-center;
+  padding: $espaciado-xxl $espaciado-lg;
+}
+
+// Container interno
+.container {
+  max-width: $breakpoint-xl;
+  margin: 0 auto;
+  width: 100%;
+}

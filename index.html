@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema LC - Gestión de Deudas</title>
+  
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="container header-container">
+        <nav class="nav header-nav">
+            <a href="index.html" class="active">🏠 Inicio</a>
+            <a href="consulta.html">🔍 Consulta</a>
+            <a href="admin.html">⚙️ Administración</a>
+        </nav>
+        <h2 class="header-title">⚖️ Estudio LC</h2>
+    </div>
+</header>
+
+  <main class="main">
+    <div class="welcome-card">
+      <div class="logo">🏛️</div>
+      <h1>¡Bienvenidos al Sistema LC!</h1>
+      <p class="subtitle">Sistema de Gestión de Deudas Municipales</p>
+      
+      <div id="statsContainer">
+        <div class="stats-dashboard">
+          <div class="stat-box total">
+            <div class="loading"></div>
+            <div class="cargando-texto">Contando causas...</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="leyenda">
+        <strong>Estados:</strong>
+        X = Extrajudicial |
+        D = Con Demanda |
+        S = Con Sentencia |
+        E = Ejecución |
+        C = Con Convenio |
+        P = Pagadas |
+        B = Baja
+      </div>
+      
+      <div class="actions">
+        <a href="consulta.html" class="btn btn-exito">🔍 Consultar Causas</a>
+        <a href="admin.html" class="btn btn-secundario">⚙️ Administración</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    © 2025 Estudio LC - Sistema de Gestión de Deudas | Datos almacenados en Supabase
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+  <script>
+    // Cargar estadísticas al iniciar
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarEstadisticas('statsContainer');
+    });
+  </script>
+</body>
+</html>

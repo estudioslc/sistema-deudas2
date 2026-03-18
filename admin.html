@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema LC - Administración</title>
+  
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- SheetJS para Excel -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/styles-internal.css">
+</head>
+<body class="page-internal">
+  <header class="header">
+    <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; width: calc(100% - 40px);">
+        <nav class="nav" style="margin-top: 0;">
+            <a href="index.html">🏠 Inicio</a>
+            <a href="carga.html">📤 Carga Masiva</a>
+            <a href="consulta.html">🔍 Consulta y Edición</a>
+            <a href="admin.html" class="active">⚙️ Administración</a>
+        </nav>
+        <h1 style="font-size: 20px; margin: 0;">⚖️ Estudio LC</h1>
+    </div>
+    <p class="subtitle" style="text-align: center; margin-top: 10px;">Panel de administración</p>
+</header>
+
+  <main class="main">
+    <div id="mensaje"></div>
+    
+    <div class="card">
+      <h2>📊 Estadísticas</h2>
+      <div id="estadisticas">
+        <div class="loading"></div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>📥 Exportar Datos</h2>
+      <p>Descarga todas las causas o filtra por estado</p>
+      
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+        <button id="btnExportar" onclick="exportarExcel()" class="btn btn-primario">
+          📥 Exportar Todo
+        </button>
+        <button id="btnExportarX" onclick="exportarPorEstado('X')" class="btn btn-secundario">
+          📥 Extrajudicial
+        </button>
+        <button id="btnExportarD" onclick="exportarPorEstado('D')" class="btn btn-secundario">
+          📥 Con Demanda
+        </button>
+        <button id="btnExportarS" onclick="exportarPorEstado('S')" class="btn btn-secundario">
+          📥 Con Sentencia
+        </button>
+        <button id="btnExportarE" onclick="exportarPorEstado('E')" class="btn btn-secundario">
+          📥 Ejecución
+        </button>
+        <button id="btnExportarC" onclick="exportarPorEstado('C')" class="btn btn-secundario">
+          📥 Con Convenio
+        </button>
+        <button id="btnExportarP" onclick="exportarPorEstado('P')" class="btn btn-secundario">
+          📥 Pagadas
+        </button>
+        <button id="btnExportarB" onclick="exportarPorEstado('B')" class="btn btn-secundario">
+          📥 Baja
+        </button>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>🧹 Mantenimiento</h2>
+      <p>Opciones de limpieza y mantenimiento de datos</p>
+      
+      <div style="margin-top: 15px;">
+        <button onclick="limpiarDatosPrueba()" class="btn btn-peligro">
+          🗑️ Eliminar Datos de Prueba
+        </button>
+        <p class="subtitle" style="margin-top: 10px;">
+          Elimina causas con estado X y monto 0 (datos de prueba)
+        </p>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>ℹ️ Información del Sistema</h2>
+      <table style="width: 100%; margin-top: 15px;">
+        <tr>
+          <td><strong>Versión</strong></td>
+          <td>2.0</td>
+        </tr>
+        <tr>
+          <td><strong>Base de Datos</strong></td>
+          <td>Supabase</td>
+        </tr>
+        <tr>
+          <td><strong>Última actualización</strong></td>
+          <td>Febrero 2025</td>
+        </tr>
+      </table>
+    </div>
+  </main>
+
+  <footer class="footer">
+    © 2025 Estudio LC - Sistema de Gestión de Deudas
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+  <script src="js/pages/admin.js"></script>
+</body>
+</html>

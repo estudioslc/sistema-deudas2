@@ -1,0 +1,85 @@
+// ==========================================
+// TARJETAS
+// ==========================================
+
+.welcome-card {
+  @include tarjeta-elevada;
+  padding: $espaciado-xxxl;
+  text-align: center;
+  max-width: 900px;
+  width: 100%;
+}
+
+.card {
+  @include tarjeta;
+  padding: $espaciado-xl;
+  margin-bottom: $espaciado-lg;
+}
+
+// Tarjetas de estadísticas
+.stats-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: $espaciado-md;
+  margin: $espaciado-xl 0;
+}
+
+.stat-box {
+  background: $gradiente-principal;
+  color: white;
+  padding: $espaciado-lg;
+  border-radius: $radio-xl;
+  box-shadow: $sombra-md;
+  cursor: pointer;
+  transition: $transicion-normal;
+  text-decoration: none;
+  display: block;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: $sombra-lg;
+  }
+  
+  &.total {
+    background: $gradiente-primario;
+    grid-column: 1 / -1;
+  }
+  
+  &.baja {
+    background: $gradiente-baja;
+  }
+}
+
+.stat-number {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: $espaciado-xs;
+}
+
+.stat-label {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+// Stats grid (versión alternativa)
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $espaciado-md;
+  margin: $espaciado-lg 0;
+  
+  .stat-box {
+    background: #f8f9fa;
+    text-align: center;
+    border-left: 4px solid $color-primario;
+    
+    .stat-number {
+      color: $color-primario;
+    }
+    
+    .stat-label {
+      color: #666;
+      margin-top: $espaciado-xs;
+    }
+  }
+}
