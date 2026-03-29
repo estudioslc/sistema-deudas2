@@ -15,16 +15,22 @@
 </head>
 <body class="page-internal">
   <header class="header">
-    <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; width: calc(100% - 40px);">
-        <nav class="nav" style="margin-top: 0;">
-            <a href="index.html">🏠 Inicio</a>
-            <a href="carga.html" class="active">📤 Carga Masiva</a>
-            <a href="consulta.html">🔍 Consulta y Edición</a>
-            <a href="admin.html">⚙️ Administración</a>
-        </nav>
-        <h1 style="font-size: 20px; margin: 0;">⚖️ Estudio LC</h1>
+  <div class="header-content">
+    <div class="header-brand">
+      <span class="header-icon">⚖️</span>
+      <div>
+        <h1 class="header-title">Estudio LC - Sistema de Gestión</h1>
+        <p class="header-subtitle">Carga masiva de causas desde Excel</p>
+      </div>
     </div>
-    <p class="subtitle" style="text-align: center; margin-top: 10px;">Carga masiva de causas desde Excel</p>
+    <nav class="header-nav">
+      <a href="index.html">🏠 Inicio</a>
+      <a href="consulta.html">🔍 Consulta y Edición</a>
+      <a href="carga.html" class="active">📥 Carga</a>
+      <a href="fusion.html">🔀 Fusión</a>
+      <a href="admin.html">⚙️ Admin</a>
+    </nav>
+  </div>
 </header>
 
   <main class="main">
@@ -36,9 +42,9 @@
       
       <input type="file" id="archivoExcel" accept=".xlsx,.xls">
       
-      <div style="margin-top: 15px;">
-        <button id="btnProcesar" onclick="procesarExcel()" disabled>📊 Procesar Excel</button>
-        <button id="btnCargar" onclick="cargarDatos()" disabled class="btn-exito">📤 Cargar a Base de Datos</button>
+      <div style="margin-top: 15px; display: flex; gap: 8px;">
+        <button id="btnProcesar" onclick="procesarExcel()" disabled class="btn btn-secundario btn-sm">📊 Procesar Excel</button>
+        <button id="btnCargar" onclick="cargarDatos()" disabled class="btn btn-exito btn-sm">📤 Cargar a Base de Datos</button>
       </div>
     </div>
     

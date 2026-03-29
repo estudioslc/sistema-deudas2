@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp \"C:\\\\Users\\\\Miguel\\\\Desktop\\\\sistema-deudas2-main\\\\js\\\\pages\\\\fusion.js\" \"C:\\\\Users\\\\Miguel\\\\Desktop\\\\sistema-deudas2-main\\\\js\\\\pages\\\\fusion.backup.js\")",
+      "Bash(cp \"C:\\\\Users\\\\Miguel\\\\Downloads\\\\fusion.js\" \"C:\\\\Users\\\\Miguel\\\\Desktop\\\\sistema-deudas2-main\\\\js\\\\pages\\\\fusion.js\")",
+      "Bash(\"C:\\\\Users\\\\Miguel\\\\Desktop\\\\sistema-deudas2-main\\\\consulta-js.txt\")",
+      "Bash(\"C:\\\\Users\\\\Miguel\\\\Desktop\\\\sistema-deudas2-main\\\\consulta-html.txt\")",
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(clear:*)",
+      "Bash(\"C:\\\\Users\\\\Miguel\\\\Desktop\\\\sistema-deudas2-main\\\\styles-css.txt\")",
+      "Bash(cp \"c:/Users/Miguel/Desktop/sistema-deudas2-main/consulta.html\" \"c:/Users/Miguel/Desktop/sistema-deudas2-main/consulta-html.txt\")",
+      "Bash(cp \"c:/Users/Miguel/Desktop/sistema-deudas2-main/js/pages/consulta.js\" \"c:/Users/Miguel/Desktop/sistema-deudas2-main/consulta-js.txt\")",
+      "Bash(cp \"c:/Users/Miguel/Desktop/sistema-deudas2-main/admin.html\" \"c:/Users/Miguel/Desktop/sistema-deudas2-main/admin-html.txt\")",
+      "Bash(cp \"c:/Users/Miguel/Desktop/sistema-deudas2-main/index.html\" \"c:/Users/Miguel/Desktop/sistema-deudas2-main/index-html.txt\")",
+      "Bash(cp \"c:/Users/Miguel/Desktop/sistema-deudas2-main/css/styles-internal.css\" \"c:/Users/Miguel/Desktop/sistema-deudas2-main/styles-css.txt\")"
+    ]
+  }
+}

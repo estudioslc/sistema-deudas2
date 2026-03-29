@@ -636,39 +636,44 @@
   </style>
 </head>
 <body class="page-internal">
-  <header class="header">
-    <h1>⚖️ Estudio LC - Sistema de Gestión</h1>
-    <p class="subtitle">Consulta y edición de causas</p>
-    <nav class="nav">
+<header class="header">
+  <div class="header-content">
+    <div class="header-brand">
+      <span class="header-icon">⚖️</span>
+      <div>
+        <h1 class="header-title">Estudio LC - Sistema de Gestión</h1>
+        <p class="header-subtitle">Consulta y edición de causas</p>
+      </div>
+    </div>
+    <nav class="header-nav">
       <a href="index.html">🏠 Inicio</a>
-      <a href="carga.html">📤 Carga Masiva</a>
       <a href="consulta.html" class="active">🔍 Consulta</a>
-      <a href="admin.html">⚙️ Administración</a>
+      <a href="carga.html">📥 Carga</a>
+      <a href="fusion.html">🔀 Fusión</a>
+      <a href="admin.html">⚙️ Admin</a>
     </nav>
-  </header>
+  </div>
+</header>
 
   <main class="main">
     <div id="mensaje"></div>
     
     <div class="card">
-      <div class="search-box">
-        <input type="text" id="busqueda" placeholder="🔍 Buscar por Jud ID, expediente, carátula, deudor, documento o CUIT...">
-        <button onclick="buscarCausas()">Buscar</button>
-      </div>
-      
-      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center;">
-        <strong style="font-size: 13px;">Filtrar por estado:</strong>
-        <button onclick="filtrarPorEstado('todos')" class="btn btn-sm btn-secundario">Todos</button>
-        <button onclick="filtrarPorEstado('X')" class="btn btn-sm">Extrajudicial</button>
-        <button onclick="filtrarPorEstado('D')" class="btn btn-sm">Con Demanda</button>
-        <button onclick="filtrarPorEstado('S')" class="btn btn-sm">Con Sentencia</button>
-        <button onclick="filtrarPorEstado('E')" class="btn btn-sm">Ejecución</button>
-        <button onclick="filtrarPorEstado('C')" class="btn btn-sm">Con Convenio</button>
-        <button onclick="filtrarPorEstado('P')" class="btn btn-sm">Pagadas</button>
-        <button onclick="filtrarPorEstado('B')" class="btn btn-sm">Baja</button>
-        <button onclick="limpiarTodasLasCausas()" class="btn btn-peligro" style="margin-left: 15px; font-size: 12px;">🗑️ Limpiar Todo</button>
-      </div>
-    </div>
+  <div class="search-box">
+    <input type="text" id="busqueda" placeholder="🔍 Buscar por Jud ID, expediente, titular, CUIT...">
+  </div>
+  <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center;">
+    <strong style="font-size: 13px;">Estado:</strong>
+    <button onclick="filtrarPorEstado('todos')" class="btn btn-sm btn-secundario btn-filtro-estado" data-estado="todos">Todos</button>
+    <button onclick="filtrarPorEstado('X')" class="btn btn-sm btn-filtro-estado" data-estado="X">Extrajudicial</button>
+    <button onclick="filtrarPorEstado('D')" class="btn btn-sm btn-filtro-estado" data-estado="D">Con Demanda</button>
+    <button onclick="filtrarPorEstado('S')" class="btn btn-sm btn-filtro-estado" data-estado="S">Con Sentencia</button>
+    <button onclick="filtrarPorEstado('E')" class="btn btn-sm btn-filtro-estado" data-estado="E">Ejecución</button>
+    <button onclick="filtrarPorEstado('C')" class="btn btn-sm btn-filtro-estado" data-estado="C">Con Convenio</button>
+    <button onclick="filtrarPorEstado('P')" class="btn btn-sm btn-filtro-estado" data-estado="P">Pagadas</button>
+    <button onclick="filtrarPorEstado('B')" class="btn btn-sm btn-filtro-estado" data-estado="B">Baja</button>
+  </div>
+</div>
     
     <div id="resultados">
       <div class="stats-dashboard">

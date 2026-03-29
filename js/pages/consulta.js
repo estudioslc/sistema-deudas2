@@ -34,12 +34,13 @@ async function cargarCausas(filtro = null) {
     
     let query = supabaseClient
       .from('deudas')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
+      .select('*');
+
     if (filtro && filtro !== 'todos') {
       query = query.eq('estado', filtro);
     }
+
+    query = query.order('fecha_carga', { ascending: false });
     
     const { data, error } = await query;
     
@@ -67,79 +68,110 @@ async function cargarCausas(filtro = null) {
 function mostrarCausas(lista) {
   const container = document.getElementById('resultados');
   if (!container) return;
-  
+
   if (lista.length === 0) {
     container.innerHTML = '<div class="info">No se encontraron causas</div>';
     return;
   }
-  
+
   let html = `
     <div class="preview">
-      <table>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <colgroup>
+          <col style="width:85px">
+          <col style="width:135px">
+          <col style="width:185px">
+          <col style="width:118px">
+          <col style="width:160px">
+          <col style="width:175px">
+          <col style="width:140px">
+          <col style="width:70px">
+        </colgroup>
         <thead>
           <tr>
-            <th>Jud ID</th>
-            <th>Expediente</th>
-            <th>Carátula</th>
-            <th>Deudor/Titular</th>
-            <th>Documento/CUIT</th>
-            <th>Monto</th>
-            <th>Estado</th>
-            <th>Acciones</th>
+            <th style="font-size:11px;font-weight:500;color:#444;text-transform:uppercase;letter-spacing:0.04em;padding:10px 16px;text-align:left;border-bottom:1px solid #ddd;background:#f0f0f0;">Jud ID</th>
+            <th style="font-size:11px;font-weight:500;color:#444;text-transform:uppercase;letter-spacing:0.04em;padding:10px 16px;text-align:left;border-bottom:1px solid #ddd;background:#f0f0f0;">Expediente</th>
+            <th style="font-size:11px;font-weight:500;color:#444;text-transform:uppercase;letter-spacing:0.04em;padding:10px 16px;text-align:left;border-bottom:1px solid #ddd;background:#f0f0f0;">Titular</th>
+            <th style="font-size:11px;font-weight:500;color:#444;text-transform:uppercase;letter-spacing:0.04em;padding:10px 16px;text-align:left;border-bottom:1px solid #ddd;background:#f0f0f0;">CUIT</th>
+            <th style="font-size:11px;font-weight:500;color:#444;text-transform:uppercase;letter-spacing:0.04em;padding:10px 16px;text-align:left;border-bottom:1px solid #ddd;background:#f0f0f0;">Teléfono</th>
+            <th style="font-size:11px;font-weight:500;color:#444;text-transform:uppercase;letter-spacing:0.04em;padding:10px 16px;text-align:left;border-bottom:1px solid #ddd;background:#f0f0f0;">Mail</th>
+            <th style="font-size:11px;font-weight:500;color:#444;text-transform:uppercase;letter-spacing:0.04em;padding:10px 16px;text-align:left;border-bottom:1px solid #ddd;background:#f0f0f0;">Estado</th>
+            <th style="border-bottom:1px solid #ddd;background:#f0f0f0;"></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="tbody-causas"></tbody>
+      </table>
+    </div>
+    <div id="toast-copia" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2E7D52;color:white;font-size:12px;padding:7px 18px;border-radius:20px;opacity:0;transition:opacity 0.2s;pointer-events:none;z-index:9999;">Copiado al portapapeles</div>
   `;
-  
-  lista.forEach(causa => {
-    const nombre = causa.deudor || causa.titular || '-';
-    const doc = causa.documento || causa.cuit || '-';
-    
-    html += `
-      <tr>
-        <td>${causa.jud_id || '-'}</td>
-        <td>${causa.expediente || '-'}</td>
-        <td>${causa.caratula || '-'}</td>
-        <td>${nombre}</td>
-        <td>${doc}</td>
-        <td>${formatCurrency(causa.monto)}</td>
-        <td>${createEstadoBadge(causa.estado)}</td>
-        <td>
-          <button onclick="verDetalle(${causa.id})" class="btn btn-sm btn-primario">👁️ Ver</button>
-        </td>
-      </tr>
-    `;
-  });
-  
-  html += '</tbody></table></div>';
-  html += `<div class="info">Total: ${lista.length} causas</div>`;
-  
+
   container.innerHTML = html;
+
+  const tbody = document.getElementById('tbody-causas');
+
+  lista.forEach((causa, i) => {
+    const tr = document.createElement('tr');
+    const bgColor = i % 2 === 0 ? '#ffffff' : '#f9f9f9';
+    tr.style.cssText = `background:${bgColor};border-bottom:0.5px solid #eee;transition:background 0.15s;`;
+    tr.onmouseenter = () => tr.style.background = '#E4F4ED';
+    tr.onmouseleave = () => tr.style.background = bgColor;
+
+    const tels = parsearLista(causa.telefono);
+    const mails = parsearLista(causa.mail);
+
+    tr.innerHTML = `
+      <td style="padding:11px 16px;font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${causa.jud_id || '—'}</td>
+      <td style="padding:11px 16px;font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${causa.expediente || '—'}</td>
+      <td style="padding:11px 16px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${causa.titular || '—'}</td>
+      <td style="padding:11px 16px;font-size:12px;color:#666;white-space:nowrap;">${causa.cuit || '—'}</td>
+      <td style="padding:11px 16px;cursor:copy;overflow:hidden;max-width:160px;">${renderChips(tels, 1)}</td>
+      <td style="padding:11px 16px;cursor:copy;overflow:hidden;max-width:175px;">${renderChips(mails, 1)}</td>
+      <td style="padding:11px 16px;">${createEstadoBadge(causa.estado)}</td>
+      <td style="padding:11px 16px;"><button onclick="verDetalle(${causa.id})" class="btn btn-sm btn-primario">👁️ Ver</button></td>
+    `;
+
+    const tdTel = tr.children[4];
+    const tdMail = tr.children[5];
+    tdTel.ondblclick = () => copiarAlPortapapeles(tels.join(' / '));
+    tdMail.ondblclick = () => copiarAlPortapapeles(mails.join(' / '));
+
+    tbody.appendChild(tr);
+  });
 }
 
 // ==========================================
 // BÚSQUEDA
 // ==========================================
 
-function buscarCausas() {
-  const termino = document.getElementById('busqueda')?.value?.toLowerCase()?.trim();
-  
+async function buscarCausas() {
+  const termino = document.getElementById('busqueda')?.value?.trim();
+  const container = document.getElementById('resultados');
+
   if (!termino) {
-    mostrarCausas(causas);
+    cargarCausas();
     return;
   }
-  
-  const filtradas = causas.filter(c => 
-    (c.jud_id && String(c.jud_id).toLowerCase().includes(termino)) ||
-    (c.cuit && String(c.cuit).toLowerCase().includes(termino)) ||
-    (c.expediente && String(c.expediente).toLowerCase().includes(termino)) ||
-    (c.caratula && String(c.caratula).toLowerCase().includes(termino)) ||
-    (c.deudor && String(c.deudor).toLowerCase().includes(termino)) ||
-    (c.documento && String(c.documento).toLowerCase().includes(termino)) ||
-    (c.titular && String(c.titular).toLowerCase().includes(termino))
-  );
-  
-  mostrarCausas(filtradas);
+
+  if (!supabaseClient) initSupabase();
+  showLoading('resultados', 'Buscando...');
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('deudas')
+      .select('*')
+      .or(`jud_id.ilike.%${termino}%,cuit.ilike.%${termino}%,expediente.ilike.%${termino}%,caratula.ilike.%${termino}%,titular.ilike.%${termino}%,expte_judicial.ilike.%${termino}%`)
+      .order('fecha_carga', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    causas = data || [];
+    mostrarCausas(causas);
+
+  } catch (err) {
+    console.error('Error al buscar:', err);
+    container.innerHTML = '<div class="error">Error al buscar: ' + err.message + '</div>';
+  }
 }
 
 // ==========================================
@@ -168,11 +200,13 @@ function verDetalle(id) {
   }
   
   // Por defecto mostrar mov/expte
-  tabActual = 'expte';
-  mostrarContenidoTab('expte');
-  
-  // Cargar movimientos expte
-  cargarMovimientosExpte();
+  tabActual = 'extrajudicial';
+  document.querySelectorAll('.contenido-tab').forEach(t => t.style.display = 'none');
+  const tabExtrajudicial = document.getElementById('contenido-extrajudicial');
+  if (tabExtrajudicial) tabExtrajudicial.style.display = 'block';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
+  const btnExtrajudicial = document.querySelector('.tab-btn[onclick*="extrajudicial"]');
+  if (btnExtrajudicial) btnExtrajudicial.classList.add('activo');
   
   const modal = document.getElementById('modalDetalle');
   if (modal) {
@@ -189,12 +223,12 @@ function llenarResumen(causa) {
   const grid = document.getElementById('resumenGrid');
   if (!grid) return;
   
-  const nombre = causa.titular || causa.deudor || '-';
-  const doc = causa.cuit || causa.documento || '-';
+  const nombre = causa.titular || '-';
+  const doc = causa.cuit || '-';
   const estadoNombre = NOMBRES_ESTADO[causa.estado] || causa.estado || '-';
-  const monto = formatCurrency(causa.monto);
+  const totalDeuda = formatCurrency((causa.nominal || 0) + (causa.accesorios || 0) + (causa.multa || 0));
   const expediente = causa.expediente || '-';
-  
+
   grid.innerHTML = `
     <div class="resumen-item">
       <span class="resumen-label">Titular</span>
@@ -209,17 +243,26 @@ function llenarResumen(causa) {
       <span class="resumen-value">${estadoNombre}</span>
     </div>
     <div class="resumen-item">
-      <span class="resumen-label">Monto deuda</span>
-      <span class="resumen-value">${monto}</span>
+      <span class="resumen-label">Total deuda</span>
+      <span class="resumen-value">${totalDeuda}</span>
     </div>
     <div class="resumen-item">
-      <span class="resumen-label">Cuit</span>
+      <span class="resumen-label">CUIT</span>
       <span class="resumen-value">${doc}</span>
     </div>
     <div class="resumen-item">
       <span class="resumen-label">Expediente</span>
       <span class="resumen-value">${expediente}</span>
     </div>
+    ${(causa.estado === 'P' || causa.estado === 'C') && causa.fecha_pago ? `
+    <div class="resumen-item">
+      <span class="resumen-label">Último Pago</span>
+      <span class="resumen-value" style="color:#2E7D52;">${new Date(causa.fecha_pago).toLocaleDateString('es-AR')}</span>
+    </div>
+    <div class="resumen-item">
+      <span class="resumen-label">Monto Pagado</span>
+      <span class="resumen-value" style="color:#2E7D52;">${formatCurrency(causa.monto_pagado || 0)}</span>
+    </div>` : ''}
   `;
 }
 
@@ -231,37 +274,41 @@ function llenarDatosCompletos(causa) {
     { label: 'ID', valor: causa.id },
     { label: 'Jud ID', valor: causa.jud_id },
     { label: 'Expediente', valor: causa.expediente },
+    { label: 'Tipo', valor: causa.tipo },
+    { label: 'Orden', valor: causa.orden },
+    { label: 'Año', valor: causa.anio },
     { label: 'Carátula', valor: causa.caratula },
-    { label: 'Deudor', valor: causa.deudor },
     { label: 'Titular', valor: causa.titular },
-    { label: 'Documento', valor: causa.documento },
     { label: 'CUIT', valor: causa.cuit },
-    { label: 'Monto', valor: formatCurrency(causa.monto) },
+    { label: 'Nominal', valor: formatCurrency(causa.nominal) },
+    { label: 'Accesorios', valor: formatCurrency(causa.accesorios) },
+    { label: 'Multa', valor: formatCurrency(causa.multa) },
     { label: 'Estado', valor: causa.estado },
-    { label: 'Teléfono', valor: causa.telefono || causa.telefono_fusion },
-    { label: 'Email', valor: causa.mail || causa.email_fusion },
+    { label: 'Teléfono', valor: causa.telefono },
+    { label: 'Mail', valor: causa.mail },
     { label: 'Domicilio Postal', valor: causa.domicilio_postal },
     { label: 'Domicilio Inmueble', valor: causa.domicilio_inmueble },
     { label: 'Barrio Inmueble', valor: causa.barrio_inmueble },
     { label: 'Domicilio Juzgado', valor: causa.domicilio_juzgado },
-    { label: 'Observaciones', valor: causa.observaciones },
-    { label: 'Observaciones Fusión', valor: causa.observaciones_fusion },
+    { label: 'Obs. Municipal', valor: causa.obs_muni },
+    { label: 'Obs. Propia', valor: causa.obs_propia },
     { label: 'Expediente Judicial', valor: causa.expte_judicial },
-    { label: 'Dominio/Objeto', valor: causa.dominio_objeto || causa.identificador },
-    { label: 'Infracción', valor: causa.infraccion },
-    { label: 'Fecha Infracción', valor: causa.fch_infrac },
-    { label: 'Hora Infracción', valor: causa.hora_infrac },
-    { label: 'Vehículo', valor: causa.vehiculo },
-    { label: 'Causa', valor: causa.causa },
-    { label: 'Objeto ID', valor: causa.obj_id },
+    { label: 'Identificador', valor: causa.identificador },
+    { label: 'Obj ID', valor: causa.obj_id },
     { label: 'Tipo Objeto', valor: causa.tipo_obj },
     { label: 'Régimen', valor: causa.regimen },
     { label: 'Año Fabricación', valor: causa.anio_fab },
     { label: 'Valor Rodado', valor: causa.valor_rodado },
+    { label: 'Causa', valor: causa.causa },
+    { label: 'Fecha Infracción', valor: causa.fch_infrac },
+    { label: 'Hora Infracción', valor: causa.hora_infrac },
+    { label: 'Infracción', valor: causa.infraccion },
+    { label: 'Vehículo', valor: causa.vehiculo },
     { label: 'Carpeta', valor: causa.carpeta },
-    { label: 'Notas Seguimiento', valor: causa.notas_seguimiento },
-    { label: 'Creado', valor: causa.created_at ? new Date(causa.created_at).toLocaleString() : '-' },
-    { label: 'Última Actualización', valor: causa.fecha_ultima_actualizacion ? new Date(causa.fecha_ultima_actualizacion).toLocaleString() : '-' }
+    { label: 'Fecha Carga', valor: causa.fecha_carga ? new Date(causa.fecha_carga).toLocaleString() : '-' },
+    { label: 'Última Actualización', valor: causa.fecha_actualizacion ? new Date(causa.fecha_actualizacion).toLocaleString() : '-' },
+    { label: 'Fecha de Pago', valor: causa.fecha_pago ? new Date(causa.fecha_pago).toLocaleDateString('es-AR') : null },
+    { label: 'Monto Pagado', valor: causa.monto_pagado ? formatCurrency(causa.monto_pagado) : null }
   ];
   
   let html = '';
@@ -709,7 +756,7 @@ async function guardarNuevoMovimiento() {
   
   const nuevoRegistro = fecha + '##' + texto + '##' + usuario + '||';
   
-  let valorActual = causaActualDetalle.observaciones_fusion || '';
+  let valorActual = causaActualDetalle.obs_propia || '';
   
   if (valorActual.endsWith('/')) {
     valorActual = valorActual.replace(/\//g, '||');
@@ -720,12 +767,12 @@ async function guardarNuevoMovimiento() {
   try {
     const { error } = await supabaseClient
       .from('deudas')
-      .update({ observaciones_fusion: nuevoValor })
+      .update({ obs_propia: nuevoValor })
       .eq('id', causaActualDetalle.id);
     
     if (error) throw error;
     
-    causaActualDetalle.observaciones_fusion = nuevoValor;
+    causaActualDetalle.obs_propia = nuevoValor;
     
     cancelarNuevo();
     cargarMovimientos();
@@ -742,7 +789,7 @@ function cargarMovimientos() {
   const timeline = document.getElementById('timelineMovimientos');
   if (!timeline || !causaActualDetalle) return;
   
-  const observaciones = causaActualDetalle.observaciones_fusion || '';
+  const observaciones = causaActualDetalle.obs_propia || '';
   
   if (!observaciones.trim()) {
     timeline.innerHTML = '<div class="sin-movimientos">No hay movimientos registrados</div>';
@@ -840,7 +887,7 @@ async function guardarEdicionMovimiento(index) {
   
   const nuevoTexto = textarea.value.trim();
   
-  let observaciones = causaActualDetalle.observaciones_fusion || '';
+  let observaciones = causaActualDetalle.obs_propia || '';
   const movimientos = parsearMovimientos(observaciones);
   
   const movIndex = movimientos.findIndex(function(m) { 
@@ -861,12 +908,12 @@ async function guardarEdicionMovimiento(index) {
   try {
     const { error } = await supabaseClient
       .from('deudas')
-      .update({ observaciones_fusion: nuevoValor })
+      .update({ obs_propia: nuevoValor })
       .eq('id', causaActualDetalle.id);
     
     if (error) throw error;
     
-    causaActualDetalle.observaciones_fusion = nuevoValor;
+    causaActualDetalle.obs_propia = nuevoValor;
     cargarMovimientos();
     
     showSuccess('Movimiento actualizado correctamente');
@@ -882,7 +929,7 @@ async function eliminarMovimiento(index) {
   
   if (!causaActualDetalle) return;
   
-  let observaciones = causaActualDetalle.observaciones_fusion || '';
+  let observaciones = causaActualDetalle.obs_propia || '';
   const movimientos = parsearMovimientos(observaciones);
   
   const movimientosFiltrados = movimientos.filter(function(m) { 
@@ -904,12 +951,12 @@ async function eliminarMovimiento(index) {
   try {
     const { error } = await supabaseClient
       .from('deudas')
-      .update({ observaciones_fusion: nuevoValor || null })
+      .update({ obs_propia: nuevoValor || null })
       .eq('id', causaActualDetalle.id);
     
     if (error) throw error;
     
-    causaActualDetalle.observaciones_fusion = nuevoValor || null;
+    causaActualDetalle.obs_propia = nuevoValor || null;
     cargarMovimientos();
     
     showSuccess('Movimiento eliminado correctamente');
@@ -975,11 +1022,11 @@ function editarCausa(id) {
   document.getElementById('editId').value = causa.id;
   document.getElementById('editExpediente').value = causa.expediente || '';
   document.getElementById('editCaratula').value = causa.caratula || '';
-  document.getElementById('editDeudor').value = causa.deudor || causa.titular || '';
-  document.getElementById('editDocumento').value = causa.documento || causa.cuit || '';
-  document.getElementById('editMonto').value = causa.monto || '';
+  document.getElementById('editDeudor').value = causa.titular || '';
+  document.getElementById('editDocumento').value = causa.cuit || '';
+  document.getElementById('editMonto').value = causa.nominal || '';
   document.getElementById('editEstado').value = causa.estado || 'X';
-  document.getElementById('editObservaciones').value = causa.observaciones || causa.observaciones_fusion || '';
+  document.getElementById('editObservaciones').value = causa.obs_propia || '';
   
   document.getElementById('modalEdicion').style.display = 'block';
 }
@@ -990,11 +1037,11 @@ async function guardarEdicion() {
   const datos = {
     expediente: document.getElementById('editExpediente').value,
     caratula: document.getElementById('editCaratula').value,
-    deudor: document.getElementById('editDeudor').value,
-    documento: document.getElementById('editDocumento').value,
-    monto: parseFloat(document.getElementById('editMonto').value) || 0,
+    titular: document.getElementById('editDeudor').value,
+    cuit: document.getElementById('editDocumento').value,
+    nominal: parseFloat(document.getElementById('editMonto').value) || null,
     estado: document.getElementById('editEstado').value,
-    observaciones: document.getElementById('editObservaciones').value,
+    obs_propia: document.getElementById('editObservaciones').value,
     fecha_actualizacion: new Date().toISOString()
   };
   
@@ -1050,8 +1097,49 @@ async function eliminarCausa(id) {
 // ==========================================
 
 function filtrarPorEstado(estado) {
+  document.querySelectorAll('.btn-filtro-estado').forEach(btn => {
+    btn.classList.remove('btn-secundario');
+  });
+  const btnActivo = document.querySelector(`.btn-filtro-estado[data-estado="${estado}"]`);
+  if (btnActivo) btnActivo.classList.add('btn-secundario');
   if (!supabaseClient) initSupabase();
   cargarCausas(estado);
+}
+
+function seleccionarTextoCelda(celda) {
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(celda);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function parsearLista(valor) {
+  if (!valor) return [];
+  return valor.toString().split('/').map(v => v.trim()).filter(Boolean);
+}
+
+function renderChips(items, maxShow) {
+  if (!items || items.length === 0) return '<span style="color:#bbb;font-size:12px;">—</span>';
+  const shown = items.slice(0, maxShow);
+  const rest = items.length - maxShow;
+  let html = '<div style="display:flex;flex-wrap:nowrap;align-items:center;gap:3px;overflow:hidden;">';
+  shown.forEach(v => {
+    html += `<span style="display:inline-block;background:#f0f0f0;border-radius:4px;padding:2px 6px;font-size:11px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;vertical-align:middle;" title="${v}">${v}</span>`;
+  });
+  if (rest > 0) html += `<span style="font-size:11px;color:#aaa;">+${rest}</span>`;
+  html += '</div>';
+  return html;
+}
+
+function copiarAlPortapapeles(texto) {
+  if (!texto) return;
+  navigator.clipboard.writeText(texto).catch(() => {});
+  const toast = document.getElementById('toast-copia');
+  if (toast) {
+    toast.style.opacity = '1';
+    setTimeout(() => toast.style.opacity = '0', 1800);
+  }
 }
 
 // ==========================================

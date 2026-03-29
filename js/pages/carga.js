@@ -9,11 +9,13 @@ let columnasExcel = [];
 const MAPEO_COLUMNAS = {
   'expediente': ['expediente', 'exp', 'nro expediente', 'numero expediente'],
   'caratula': ['caratula', 'carátula', 'titulo', 'título'],
-  'deudor': ['deudor', 'deudores', 'nombre', 'apellido'],
-  'documento': ['documento', 'dni', 'cuit', 'cuil', 'cuit/cuil'],
-  'monto': ['monto', 'capital', 'deuda', 'importe', 'total'],
+  'titular': ['titular', 'nombre titular', 'deudor', 'nombre', 'apellido'],
+  'cuit': ['cuit', 'cuil', 'cuit/cuil', 'documento', 'dni'],
+  'nominal': ['nominal', 'capital', 'monto nominal'],
+  'accesorios': ['accesorios', 'intereses', 'monto accesorios'],
+  'multa': ['multa', 'monto multa'],
   'estado': ['estado', 'situacion', 'situación', 'etapa'],
-  'observaciones': ['observaciones', 'obs', 'notas', 'comentarios']
+  'obs_muni': ['observaciones', 'obs', 'notas', 'comentarios', 'obs muni', 'obs_muni']
 };
 
 // ==========================================
@@ -193,7 +195,7 @@ async function cargarDatos() {
     const registro = construirRegistro(row, mapeo);
     
     // Verificar que el registro tenga datos mínimos
-    if (!registro.expediente && !registro.deudor) {
+    if (!registro.expediente && !registro.caratula) {
       fallidos.push({ fila: i + 2, error: 'Fila vacía o sin datos mínimos' });
       continue;
     }
@@ -261,11 +263,11 @@ function construirRegistro(row, mapeo) {
           }
         }
         
-        // Normalizar monto
-        if (campo === 'monto' && valor) {
+        // Normalizar campos numéricos
+        if (['nominal', 'accesorios', 'multa'].includes(campo) && valor) {
           valor = parseFloat(String(valor).replace(/[$,\s]/g, '')) || 0;
         }
-        
+
         registro[campo] = valor;
       }
     }
@@ -273,7 +275,7 @@ function construirRegistro(row, mapeo) {
   
   // Valores por defecto
   if (!registro.estado) registro.estado = 'X';
-  if (!registro.created_at) registro.created_at = new Date().toISOString();
+  if (!registro.fecha_carga) registro.fecha_carga = new Date().toISOString();
   
   return registro;
 }

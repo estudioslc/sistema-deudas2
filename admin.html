@@ -4,77 +4,110 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema LC - Administración</title>
-  
+
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- SheetJS para Excel -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-  
+
   <!-- Estilos -->
   <link rel="stylesheet" href="css/styles-internal.css">
 </head>
 <body class="page-internal">
   <header class="header">
-    <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; width: calc(100% - 40px);">
-        <nav class="nav" style="margin-top: 0;">
-            <a href="index.html">🏠 Inicio</a>
-            <a href="carga.html">📤 Carga Masiva</a>
-            <a href="consulta.html">🔍 Consulta y Edición</a>
-            <a href="admin.html" class="active">⚙️ Administración</a>
-        </nav>
-        <h1 style="font-size: 20px; margin: 0;">⚖️ Estudio LC</h1>
+  <div class="header-content">
+    <div class="header-brand">
+      <span class="header-icon">⚖️</span>
+      <div>
+        <h1 class="header-title">Estudio LC - Sistema de Gestión</h1>
+        <p class="header-subtitle">Panel de administración</p>
+      </div>
     </div>
-    <p class="subtitle" style="text-align: center; margin-top: 10px;">Panel de administración</p>
+    <nav class="header-nav">
+      <a href="index.html">🏠 Inicio</a>
+      <a href="consulta.html">🔍 Consulta y Edición</a>
+      <a href="carga.html">📥 Carga</a>
+      <a href="fusion.html">🔀 Fusión</a>
+      <a href="admin.html" class="active">⚙️ Admin</a>
+    </nav>
+  </div>
 </header>
 
   <main class="main">
     <div id="mensaje"></div>
-    
+
     <div class="card">
       <h2>📊 Estadísticas</h2>
       <div id="estadisticas">
         <div class="loading"></div>
       </div>
     </div>
-    
+
     <div class="card">
       <h2>📥 Exportar Datos</h2>
       <p>Descarga todas las causas o filtra por estado</p>
-      
-      <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
-        <button id="btnExportar" onclick="exportarExcel()" class="btn btn-primario">
-          📥 Exportar Todo
-        </button>
-        <button id="btnExportarX" onclick="exportarPorEstado('X')" class="btn btn-secundario">
-          📥 Extrajudicial
-        </button>
-        <button id="btnExportarD" onclick="exportarPorEstado('D')" class="btn btn-secundario">
-          📥 Con Demanda
-        </button>
-        <button id="btnExportarS" onclick="exportarPorEstado('S')" class="btn btn-secundario">
-          📥 Con Sentencia
-        </button>
-        <button id="btnExportarE" onclick="exportarPorEstado('E')" class="btn btn-secundario">
-          📥 Ejecución
-        </button>
-        <button id="btnExportarC" onclick="exportarPorEstado('C')" class="btn btn-secundario">
-          📥 Con Convenio
-        </button>
-        <button id="btnExportarP" onclick="exportarPorEstado('P')" class="btn btn-secundario">
-          📥 Pagadas
-        </button>
-        <button id="btnExportarB" onclick="exportarPorEstado('B')" class="btn btn-secundario">
-          📥 Baja
-        </button>
+
+      <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 15px;">
+        <button id="btnExportar" onclick="exportarExcel()" class="btn btn-primario btn-sm">📥 Exportar Todo</button>
+        <button id="btnExportarX" onclick="exportarPorEstado('X')" class="btn btn-secundario btn-sm">Extrajudicial</button>
+        <button id="btnExportarD" onclick="exportarPorEstado('D')" class="btn btn-secundario btn-sm">Con Demanda</button>
+        <button id="btnExportarS" onclick="exportarPorEstado('S')" class="btn btn-secundario btn-sm">Con Sentencia</button>
+        <button id="btnExportarE" onclick="exportarPorEstado('E')" class="btn btn-secundario btn-sm">Ejecución</button>
+        <button id="btnExportarC" onclick="exportarPorEstado('C')" class="btn btn-secundario btn-sm">Con Convenio</button>
+        <button id="btnExportarP" onclick="exportarPorEstado('P')" class="btn btn-secundario btn-sm">Pagadas</button>
+        <button id="btnExportarB" onclick="exportarPorEstado('B')" class="btn btn-secundario btn-sm">Baja</button>
       </div>
     </div>
-    
+
     <div class="card">
+      <h2>🏛️ Exportar para CIDI</h2>
+      <p>Genera los archivos Excel para notificación municipal. Seleccioná el tipo de impuesto y la instancia.</p>
+
+      <div style="margin-top: 16px;">
+        <h3 style="font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">Extrajudicial — estado X</h3>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button onclick="exportarCIDI('AUT', 'X')" class="btn btn-sm btn-cidi-x">Automotor</button>
+          <button onclick="exportarCIDI('INM', 'X')" class="btn btn-sm btn-cidi-x">Inmueble</button>
+          <button onclick="exportarCIDI('CI', 'X')" class="btn btn-sm btn-cidi-x">Comercio e Industria</button>
+          <button onclick="exportarCIDI('TF', 'X')" class="btn btn-sm btn-cidi-x">Tribunal de Faltas</button>
+          <button onclick="exportarCIDI('TA', 'X')" class="btn btn-sm btn-cidi-x">Tasa Administrativa</button>
+          <button onclick="exportarCIDI('CEM', 'X')" class="btn btn-sm btn-cidi-x">Cementerio</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <h3 style="font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">Judicial — demás estados</h3>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button onclick="exportarCIDI('AUT', 'J')" class="btn btn-sm btn-cidi-j">Automotor</button>
+          <button onclick="exportarCIDI('INM', 'J')" class="btn btn-sm btn-cidi-j">Inmueble</button>
+          <button onclick="exportarCIDI('CI', 'J')" class="btn btn-sm btn-cidi-j">Comercio e Industria</button>
+          <button onclick="exportarCIDI('TF', 'J')" class="btn btn-sm btn-cidi-j">Tribunal de Faltas</button>
+          <button onclick="exportarCIDI('TA', 'J')" class="btn btn-sm btn-cidi-j">Tasa Administrativa</button>
+          <button onclick="exportarCIDI('CEM', 'J')" class="btn btn-sm btn-cidi-j">Cementerio</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>💰 Cargar Pagos de la Municipalidad</h2>
+      <p>Cargá el archivo mensual de pagos. Se actualizará el estado a <strong>Pagado (P)</strong> y se guardarán fecha y monto.</p>
+
+      <div style="margin-top: 15px;">
+        <input type="file" id="inputPagos" accept=".xlsx,.xls" style="display:none" onchange="procesarArchivoPagos(this)">
+        <button onclick="document.getElementById('inputPagos').click()" class="btn btn-primario btn-sm">
+          📂 Seleccionar archivo de pagos
+        </button>
+      </div>
+
+      <div id="resultadoPagos" style="margin-top: 20px;"></div>
+    </div>
+
+        <div class="card">
       <h2>🧹 Mantenimiento</h2>
       <p>Opciones de limpieza y mantenimiento de datos</p>
-      
+
       <div style="margin-top: 15px;">
-        <button onclick="limpiarDatosPrueba()" class="btn btn-peligro">
+        <button onclick="limpiarDatosPrueba()" class="btn btn-peligro btn-sm">
           🗑️ Eliminar Datos de Prueba
         </button>
         <p class="subtitle" style="margin-top: 10px;">
@@ -82,7 +115,7 @@
         </p>
       </div>
     </div>
-    
+
     <div class="card">
       <h2>ℹ️ Información del Sistema</h2>
       <table style="width: 100%; margin-top: 15px;">

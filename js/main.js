@@ -25,7 +25,7 @@ const NOMBRES_ESTADO = {
   'X': 'Extrajudicial',
   'D': 'Con Demanda',
   'S': 'Con Sentencia',
-  'E': 'Ejecución',
+  'E': 'Ejecución de Sentencia',
   'C': 'Con Convenio',
   'P': 'Pagadas',
   'B': 'Baja'

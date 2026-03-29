@@ -8,7 +8,11 @@
     "build:css-internal": "sass scss/main-internal.scss css/styles-internal.css --style=compressed",
     "build:css-internal:dev": "sass scss/main-internal.scss css/styles-internal.css --style=expanded --watch",
     "build:all": "npm run build:css && npm run build:css-internal",
-    "watch": "sass --watch scss:css"
+    "watch": "sass --watch scss:css",
+    "importar": "node importar-csv.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.2"
   },
   "devDependencies": {
     "sass": "^1.70.0"
