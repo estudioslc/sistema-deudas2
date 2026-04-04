@@ -85,6 +85,7 @@ async function exportarCIDI(tipo, instancia) {
   try {
     let query = supabaseClient.from('deudas').select('*').eq('tipo', tipo).order('expediente', { ascending: true });
     if (instancia === 'X') { query = query.eq('estado', 'X'); } else { query = query.in('estado', ['D', 'S', 'E']); }
+    query = query.eq('no_intimar', false);
     let todas = []; let desde = 0; const batch = 1000; let hayMas = true;
     while (hayMas) {
       const { data, error } = await query.range(desde, desde + batch - 1);
@@ -336,6 +337,13 @@ async function exportarCIDI_DDT(tipo, instancia) {
     if (instancia === 'X' && estado !== 'X') continue;
     if (instancia === 'J' && !estadosJudicial.includes(estado)) continue;
 
+    // Excluir no_intimar (columna en DDT)
+    const noIntimar = (fila['No intimar'] || fila['NO INTIMAR'] || fila['no_intimar'] || '').toString().trim();
+    if (noIntimar && noIntimar !== '' && noIntimar !== '0' && noIntimar.toLowerCase() !== 'false') {
+      excluidas.push({ judId, contribuyente: fila['Contribuyente'], motivo: 'No intimar' });
+      continue;
+    }
+
     // Excluir coloreadas
     if (judId && ddtColores[judId]) {
       excluidas.push({ judId, contribuyente: fila['Contribuyente'], motivo: 'Color' });
@@ -394,6 +402,129 @@ async function exportarCIDI_DDT(tipo, instancia) {
     </div>`;
   }
   container.innerHTML = html;
+}
+
+
+// ==========================================
+// EXPORTAR PARA TELEPROM
+// ==========================================
+
+// Palabras que indican mail equivocado
+const MAIL_INVALIDO = ['eq', 'equiv', 'equivocado', 'equivoc', 'mal', 'error', 'incorrecto', 'no tiene', 'notiene', 'sin mail', 'sinmail'];
+
+function mailEsValido(mail) {
+  if (!mail || mail.trim() === '') return false;
+  const m = mail.trim().toLowerCase();
+  // Verificar que tenga formato básico de email
+  if (!m.includes('@')) return false;
+  // Verificar palabras de mail equivocado
+  for (const palabra of MAIL_INVALIDO) {
+    if (m.includes(palabra)) return false;
+  }
+  return true;
+}
+
+async function exportarTeleprom(instancia) {
+  const container = document.getElementById('resultadoTeleprom');
+  const nombres = { X: 'AmmannX_Extrajudicial', D: 'AmmannD_Demanda', SE: 'AmmannSE_SentenciaEjecucion' };
+  container.innerHTML = '<div class="loading"></div> Generando...';
+
+  try {
+    // Definir estados según instancia
+    let estados;
+    if (instancia === 'X') estados = ['X'];
+    else if (instancia === 'D') estados = ['D'];
+    else estados = ['S', 'E'];
+
+    // Términos excluidos (mismos que CIDI)
+    const cuitsExcluidos = ['30999074843', '30708187123'];
+
+    // Paginar y obtener todos los registros
+    let todas = [];
+    let desde = 0;
+    const batch = 1000;
+    let hayMas = true;
+
+    while (hayMas) {
+      const { data, error } = await supabaseClient
+        .from('deudas')
+        .select('jud_id, titular, cuit, mail, no_intimar')
+        .in('estado', estados)
+        .eq('no_intimar', false)
+        .range(desde, desde + batch - 1);
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        todas = todas.concat(data);
+        hayMas = data.length === batch;
+        desde += batch;
+      } else {
+        hayMas = false;
+      }
+    }
+
+    // Filtrar y armar filas — una por email válido
+    const filas = [];
+    const judIdVistos = new Set();
+    let sinMail = 0, noIntimar = 0, excluidos = 0;
+
+    for (const c of todas) {
+      // Evitar jud_id repetidos
+      if (judIdVistos.has(c.jud_id)) continue;
+      judIdVistos.add(c.jud_id);
+
+      // Excluir sin CUIT
+      if (!c.cuit) { excluidos++; continue; }
+
+      // Excluir por CUIT conocido
+      if (cuitsExcluidos.includes(String(c.cuit).trim())) { excluidos++; continue; }
+
+      // Excluir por nombre
+      const nombre = (c.titular || '').toLowerCase();
+      if (nombre.includes('coop') ||
+          nombre.includes('municipalidad') ||
+          nombre.includes('provincia de c') ||
+          nombre.includes('ipv') ||
+          (nombre.includes('inst') && nombre.includes('vivienda'))) {
+        excluidos++; continue;
+      }
+
+      // Procesar mails (puede haber varios separados por / o ;)
+      const mails = (c.mail || '')
+        .split(/[\/;]/)
+        .map(m => m.trim())
+        .filter(m => mailEsValido(m));
+
+      if (mails.length === 0) { sinMail++; continue; }
+
+      // Una fila por mail válido
+      for (const mail of mails) {
+        filas.push({ Nombre: c.titular || '', Email: mail });
+      }
+    }
+
+    if (filas.length === 0) {
+      container.innerHTML = '<div class="error">No hay registros para exportar.</div>';
+      return;
+    }
+
+    // Generar Excel
+    const ws = XLSX.utils.json_to_sheet(filas, { header: ['Nombre', 'Email'] });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Teleprom');
+    const fecha = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `Teleprom_${nombres[instancia]}_${fecha}.xlsx`);
+
+    container.innerHTML = `
+      <div class="exito">✅ Exportadas <strong>${filas.length}</strong> filas para Teleprom — ${nombres[instancia]}</div>
+      <div class="info" style="margin-top:8px; font-size:12px;">
+        Sin mail: ${sinMail} | Excluidos (muni/coop/etc): ${excluidos}
+      </div>`;
+
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = '<div class="error">Error al generar archivo Teleprom.</div>';
+  }
 }
 
 async function limpiarDatosPrueba() {

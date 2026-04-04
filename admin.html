@@ -150,6 +150,21 @@
     </div>
 
         <div class="card">
+      <h2>📧 Exportar para Teleprom</h2>
+      <p>Genera el archivo de emails para envío masivo. Una fila por email, con Nombre y Email.</p>
+
+      <div style="margin-top: 16px;">
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button onclick="exportarTeleprom('X')" class="btn btn-sm btn-cidi-x">📧 AmmannX — Extrajudicial</button>
+          <button onclick="exportarTeleprom('D')" class="btn btn-sm btn-cidi-j">📧 AmmannD — Con Demanda</button>
+          <button onclick="exportarTeleprom('SE')" class="btn btn-sm btn-cidi-j">📧 AmmannSE — Sentencia y Ejecución</button>
+        </div>
+      </div>
+
+      <div id="resultadoTeleprom" style="margin-top:15px;"></div>
+    </div>
+
+        <div class="card">
       <h2>🧹 Mantenimiento</h2>
       <p>Opciones de limpieza y mantenimiento de datos</p>
 

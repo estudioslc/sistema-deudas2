@@ -13,7 +13,12 @@
       "Bash(cp \"c:/Users/Miguel/Desktop/sistema-deudas2-main/js/pages/consulta.js\" \"c:/Users/Miguel/Desktop/sistema-deudas2-main/consulta-js.txt\")",
       "Bash(cp \"c:/Users/Miguel/Desktop/sistema-deudas2-main/admin.html\" \"c:/Users/Miguel/Desktop/sistema-deudas2-main/admin-html.txt\")",
       "Bash(cp \"c:/Users/Miguel/Desktop/sistema-deudas2-main/index.html\" \"c:/Users/Miguel/Desktop/sistema-deudas2-main/index-html.txt\")",
-      "Bash(cp \"c:/Users/Miguel/Desktop/sistema-deudas2-main/css/styles-internal.css\" \"c:/Users/Miguel/Desktop/sistema-deudas2-main/styles-css.txt\")"
+      "Bash(cp \"c:/Users/Miguel/Desktop/sistema-deudas2-main/css/styles-internal.css\" \"c:/Users/Miguel/Desktop/sistema-deudas2-main/styles-css.txt\")",
+      "Bash(cp admin.html admin-html.txt)",
+      "Bash(cp js/pages/admin.js admin-js.txt)",
+      "Bash(cp consulta.html consulta-html.txt)",
+      "Bash(cp js/pages/consulta.js consulta-js.txt)",
+      "Bash(cp js/main.js main-js.txt)"
     ]
   }
 }

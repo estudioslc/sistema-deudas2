@@ -683,9 +683,14 @@ function prepararUpdate(tramite, registro, config) {
     if (config.updateObservaciones && columnasDetectadas.observaciones) {
         const obs = limpiarValor(tramite[columnasDetectadas.observaciones]);
         if (obs) {
+            const hoy = new Date();
+            const dia = String(hoy.getDate()).padStart(2, '0');
+            const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+            const anio = hoy.getFullYear();
+            const fechaFusion = dia + '/' + mes + '/' + anio;
+            const obsFormateada = fechaFusion + '##' + obs + '##DDT||';
             const actual = limpiarValor(registro.obs_propia);
-            // Primera fusión: reemplaza directo si hay valor en DDT
-            if (obs !== actual) updateData.obs_propia = obs;
+            if (obsFormateada !== actual) updateData.obs_propia = obsFormateada;
         }
     }
 

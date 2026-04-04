@@ -82,9 +82,9 @@ function mostrarCausas(lista) {
           <col style="width:135px">
           <col style="width:185px">
           <col style="width:118px">
-          <col style="width:160px">
+          <col style="width:110px">
           <col style="width:175px">
-          <col style="width:140px">
+          <col style="width:155px">
           <col style="width:70px">
         </colgroup>
         <thead>
@@ -124,9 +124,9 @@ function mostrarCausas(lista) {
       <td style="padding:11px 16px;font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${causa.expediente || '—'}</td>
       <td style="padding:11px 16px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${causa.titular || '—'}</td>
       <td style="padding:11px 16px;font-size:12px;color:#666;white-space:nowrap;">${causa.cuit || '—'}</td>
-      <td style="padding:11px 16px;cursor:copy;overflow:hidden;max-width:160px;">${renderChips(tels, 1)}</td>
+      <td style="padding:11px 16px;cursor:copy;overflow:hidden;max-width:110px;">${renderChips(tels, 1)}</td>
       <td style="padding:11px 16px;cursor:copy;overflow:hidden;max-width:175px;">${renderChips(mails, 1)}</td>
-      <td style="padding:11px 16px;">${createEstadoBadge(causa.estado)}</td>
+      <td style="padding:11px 16px;">${createEstadoBadge(causa.estado)}${causa.no_intimar ? ' <span title="No intimar" style="color:#cc0000;font-size:13px;">🚫</span>' : ''}</td>
       <td style="padding:11px 16px;"><button onclick="verDetalle(${causa.id})" class="btn btn-sm btn-primario">👁️ Ver</button></td>
     `;
 
@@ -199,14 +199,14 @@ function verDetalle(id) {
     btnExpandir.innerHTML = '+';
   }
   
-  // Por defecto mostrar mov/expte
   tabActual = 'extrajudicial';
   document.querySelectorAll('.contenido-tab').forEach(t => t.style.display = 'none');
-  const tabExtrajudicial = document.getElementById('contenido-extrajudicial');
-  if (tabExtrajudicial) tabExtrajudicial.style.display = 'block';
+  const tabExt = document.getElementById('contenido-extrajudicial');
+  if (tabExt) tabExt.style.display = 'block';
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
-  const btnExtrajudicial = document.querySelector('.tab-btn[onclick*="extrajudicial"]');
-  if (btnExtrajudicial) btnExtrajudicial.classList.add('activo');
+  const btnExt = document.querySelector('.tab-btn[onclick*="extrajudicial"]');
+  if (btnExt) btnExt.classList.add('activo');
+  cargarMovimientos();
   
   const modal = document.getElementById('modalDetalle');
   if (modal) {
@@ -254,6 +254,10 @@ function llenarResumen(causa) {
       <span class="resumen-label">Expediente</span>
       <span class="resumen-value">${expediente}</span>
     </div>
+    ${causa.no_intimar ? `
+    <div class="resumen-item" style="grid-column:1/-1;">
+      <span style="background:#fff0f0;color:#cc0000;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">🚫 No intimar</span>
+    </div>` : ''}
     ${(causa.estado === 'P' || causa.estado === 'C') && causa.fecha_pago ? `
     <div class="resumen-item">
       <span class="resumen-label">Último Pago</span>
@@ -307,6 +311,7 @@ function llenarDatosCompletos(causa) {
     { label: 'Carpeta', valor: causa.carpeta },
     { label: 'Fecha Carga', valor: causa.fecha_carga ? new Date(causa.fecha_carga).toLocaleString() : '-' },
     { label: 'Última Actualización', valor: causa.fecha_actualizacion ? new Date(causa.fecha_actualizacion).toLocaleString() : '-' },
+    { label: 'No Intimar', valor: causa.no_intimar ? '🚫 Sí — excluida de CIDI' : null },
     { label: 'Fecha de Pago', valor: causa.fecha_pago ? new Date(causa.fecha_pago).toLocaleDateString('es-AR') : null },
     { label: 'Monto Pagado', valor: causa.monto_pagado ? formatCurrency(causa.monto_pagado) : null }
   ];
@@ -811,14 +816,10 @@ function parsearMovimientos(texto) {
   if (!texto || texto.trim() === '') return [];
   
   if (!texto.includes('##')) {
-    const hoy = new Date();
-    const dia = String(hoy.getDate()).padStart(2, '0');
-    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-    const anio = hoy.getFullYear();
     return [{
-      fecha: dia + '/' + mes + '/' + anio,
+      fecha: 'Sin fecha',
       texto: texto,
-      usuario: 'Histórico',
+      usuario: 'DDT',
       index: 0
     }];
   }
@@ -1027,6 +1028,7 @@ function editarCausa(id) {
   document.getElementById('editMonto').value = causa.nominal || '';
   document.getElementById('editEstado').value = causa.estado || 'X';
   document.getElementById('editObservaciones').value = causa.obs_propia || '';
+  document.getElementById('editNoIntimar').checked = causa.no_intimar || false;
   
   document.getElementById('modalEdicion').style.display = 'block';
 }
@@ -1042,6 +1044,7 @@ async function guardarEdicion() {
     nominal: parseFloat(document.getElementById('editMonto').value) || null,
     estado: document.getElementById('editEstado').value,
     obs_propia: document.getElementById('editObservaciones').value,
+    no_intimar: document.getElementById('editNoIntimar').checked,
     fecha_actualizacion: new Date().toISOString()
   };
   
