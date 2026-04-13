@@ -169,7 +169,9 @@ function detectarColumnas(headers) {
         // ⚠️ CORREGIDO: "Observaciones" de DDT → obs_propia en Supabase (NO obs_muni)
         observaciones: null,
         expteJudicial: null,
-        causaOrdenAnio: null
+        causaOrdenAnio: null,
+        cuit: null,
+        contribuyente: null
     };
 
     headers.forEach(header => {
@@ -183,6 +185,8 @@ function detectarColumnas(headers) {
         if (h === 'observaciones' || h === 'obs') columnasDetectadas.observaciones = header;
         if (h.includes('expte') && h.includes('judicial')) columnasDetectadas.expteJudicial = header;
         if (h === 'causaordenaño' || h === 'causaordenano') columnasDetectadas.causaOrdenAnio = header;
+        if (h === 'cuit/cuil' || h === 'cuit' || h === 'cuil') columnasDetectadas.cuit = header;
+        if (h === 'contribuyente') columnasDetectadas.contribuyente = header;
     });
 
     console.log('Columnas detectadas:', columnasDetectadas);
@@ -263,6 +267,8 @@ function mostrarMapeoColumnas() {
         // ⚠️ CORREGIDO: muestra obs_propia (no obs_muni)
         { campo: 'Observaciones → obs_propia', columna: columnasDetectadas.observaciones, req: false },
         { campo: 'Expte. judicial → expte_judicial', columna: columnasDetectadas.expteJudicial, req: false },
+        { campo: 'CUIT/CUIL → cuit', columna: columnasDetectadas.cuit, req: false },
+        { campo: 'Contribuyente → titular', columna: columnasDetectadas.contribuyente, req: false },
     ];
 
     container.innerHTML = mapeos.map(m => `
@@ -295,6 +301,8 @@ function obtenerConfiguracion() {
         updateEmail: document.getElementById('updateEmail').checked,
         updateObservaciones: document.getElementById('updateObservaciones').checked,
         updateExpte: document.getElementById('updateExpte').checked,
+        updateCuit: document.getElementById('updateCuit')?.checked ?? true,
+        updateTitular: document.getElementById('updateTitular')?.checked ?? true,
         soloVacios: document.getElementById('soloVacios').checked,
         // Primera fusión: DDT siempre reemplaza
         modoFusion: 'reemplazar'
@@ -555,6 +563,24 @@ function calcularCambios(tramite, registro, config) {
         }
     }
 
+    // CUIT — DDT reemplaza
+    if (config.updateCuit && columnasDetectadas.cuit) {
+        const nuevoCuit = limpiarValor(tramite[columnasDetectadas.cuit]);
+        const cuitActual = limpiarValor(registro.cuit);
+        if (nuevoCuit && nuevoCuit !== cuitActual) {
+            cambios.push({ campo: 'CUIT', actual: cuitActual || '(vacío)', nuevo: nuevoCuit });
+        }
+    }
+
+    // Titular — DDT reemplaza
+    if (config.updateTitular && columnasDetectadas.contribuyente) {
+        const nuevoTitular = limpiarValor(tramite[columnasDetectadas.contribuyente]);
+        const titularActual = limpiarValor(registro.titular);
+        if (nuevoTitular && nuevoTitular !== titularActual) {
+            cambios.push({ campo: 'Titular', actual: titularActual || '(vacío)', nuevo: nuevoTitular });
+        }
+    }
+
     return cambios;
 }
 
@@ -683,14 +709,32 @@ function prepararUpdate(tramite, registro, config) {
     if (config.updateObservaciones && columnasDetectadas.observaciones) {
         const obs = limpiarValor(tramite[columnasDetectadas.observaciones]);
         if (obs) {
-            const hoy = new Date();
-            const dia = String(hoy.getDate()).padStart(2, '0');
-            const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-            const anio = hoy.getFullYear();
-            const fechaFusion = dia + '/' + mes + '/' + anio;
-            const obsFormateada = fechaFusion + '##' + obs + '##DDT||';
-            const actual = limpiarValor(registro.obs_propia);
-            if (obsFormateada !== actual) updateData.obs_propia = obsFormateada;
+            const actual = limpiarValor(registro.obs_propia) || '';
+
+            // Extraer el texto DDT actual si existe (primera entrada con ##DDT||)
+            let textoActualDDT = '';
+            if (actual.includes('##DDT||')) {
+                const entradas = actual.split('||').filter(e => e.trim());
+                const entradaDDT = entradas.find(e => e.includes('##DDT'));
+                if (entradaDDT) {
+                    textoActualDDT = entradaDDT.split('##')[1] || '';
+                }
+            }
+
+            // Solo actualizar si el texto del DDT cambió
+            if (obs !== textoActualDDT) {
+                // Conservar entradas manuales (las que NO son DDT)
+                const entradasManuales = actual
+                    ? actual.split('||').filter(e => e.trim() && !e.includes('##DDT')).join('||')
+                    : '';
+
+                const nuevaEntradaDDT = 'Sin fecha##' + obs + '##DDT||';
+
+                // DDT va primero, luego las entradas manuales
+                updateData.obs_propia = entradasManuales
+                    ? nuevaEntradaDDT + entradasManuales + '||'
+                    : nuevaEntradaDDT;
+            }
         }
     }
 
@@ -700,6 +744,24 @@ function prepararUpdate(tramite, registro, config) {
         if (expte) {
             const actual = limpiarValor(registro.expte_judicial);
             if (expte !== actual) updateData.expte_judicial = expte;
+        }
+    }
+
+    // CUIT — DDT reemplaza
+    if (config.updateCuit && columnasDetectadas.cuit) {
+        const cuit = limpiarValor(tramite[columnasDetectadas.cuit]);
+        if (cuit) {
+            const actual = limpiarValor(registro.cuit);
+            if (cuit !== actual) updateData.cuit = cuit;
+        }
+    }
+
+    // Titular — DDT reemplaza
+    if (config.updateTitular && columnasDetectadas.contribuyente) {
+        const titular = limpiarValor(tramite[columnasDetectadas.contribuyente]);
+        if (titular) {
+            const actual = limpiarValor(registro.titular);
+            if (titular !== actual) updateData.titular = titular;
         }
     }
 

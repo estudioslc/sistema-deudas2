@@ -93,28 +93,47 @@ async function exportarCIDI(tipo, instancia) {
       if (data && data.length > 0) { todas = todas.concat(data); hayMas = data.length === batch; desde += batch; } else { hayMas = false; }
     }
     if (todas.length === 0) { showError(`No hay causas ${instanciaNombre} de tipo ${config.nombre}`); return; }
+
     const headers = ['cuil','apellido','nombre','correoelectronico','celular','referencia1','referencia2','referencia3','referencia4','referencia5','referencia6','referencia7','referencia8'];
-    const filas = todas.filter(c => {
-      if (!c.cuit) return false;
-      const cuit = String(c.cuit).trim();
-      if (CIDI_CUITS_EXCLUIDOS.includes(cuit)) return false;
-      const nombre = (c.titular || '').toLowerCase();
-      if (nombre.includes('coop')) return false;
-      if (nombre.includes('ipv') || (nombre.includes('inst') && nombre.includes('vivienda'))) return false;
-      if (nombre.includes('municipalidad') || nombre.includes('provincia de c')) return false;
-      return true;
-    }).map(c => {
+    const filas = [];
+
+    for (const c of todas) {
+      if (!c.cuit) continue;
+
+      // Separar múltiples CUITs y titulares por " / "
+      const cuits = String(c.cuit).split('/').map(s => s.trim()).filter(s => s);
+      const titulares = c.titular ? String(c.titular).split('/').map(s => s.trim()).filter(s => s) : [];
+
+      // Filtros de exclusión
+      const algunExcluido = cuits.some(cu => CIDI_CUITS_EXCLUIDOS.includes(cu));
+      if (algunExcluido) continue;
+      const nombreCompleto = (c.titular || '').toLowerCase();
+      if (nombreCompleto.includes('coop')) continue;
+      if (nombreCompleto.includes('ipv') || (nombreCompleto.includes('inst') && nombreCompleto.includes('vivienda'))) continue;
+      if (nombreCompleto.includes('municipalidad') || nombreCompleto.includes('provincia de c')) continue;
+
       let ref6 = c.obs_muni || '';
       if (tipo === 'AUT') ref6 = ref6.replace(/^81-/i, '');
-      if (tipo === 'TF') { return [c.cuit||'', '', c.titular||'', '', '', config.ref1, '', config.ref3, c.expediente||'', config.ref5, ref6, 'INFRACCION:', c.obs_propia||'']; }
-      else { return [c.cuit||'', '', c.titular||'', '', '', config.ref1, c.cuit||'', config.ref3, c.expediente||'', config.ref5, ref6, '', '']; }
-    });
+
+      // Una fila por CUIT — titular correspondiente por posición
+      for (let i = 0; i < cuits.length; i++) {
+        const cuil = cuits[i];
+        const titular = titulares[i] || titulares[0] || c.titular || '';
+        if (tipo === 'TF') {
+          filas.push([cuil, '', titular, '', '', config.ref1, '', config.ref3, c.expediente||'', config.ref5, ref6, 'INFRACCION:', c.infraccion||'']);
+        } else {
+          filas.push([cuil, '', titular, '', '', config.ref1, cuil, config.ref3, c.expediente||'', config.ref5, ref6, '', '']);
+        }
+      }
+    }
+
+    if (filas.length === 0) { showError(`No hay causas ${instanciaNombre} de tipo ${config.nombre}`); return; }
     const wsData = [headers, ...CIDI_FILAS_TESTIGO[tipo], ...filas];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Hoja1');
     XLSX.writeFile(wb, `CIDI_${config.nombre}_${instanciaNombre}_${new Date().toISOString().split('T')[0]}.xlsx`);
-    showSuccess(`Exportadas ${todas.length} causas para CIDI`);
+    showSuccess(`Exportadas ${filas.length} filas para CIDI`);
   } catch (err) { console.error(err); showError('Error al generar archivo CIDI'); }
 }
 

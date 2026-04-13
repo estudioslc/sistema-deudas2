@@ -118,12 +118,16 @@ function mostrarCausas(lista) {
 
     const tels = parsearLista(causa.telefono);
     const mails = parsearLista(causa.mail);
+    const cuits = (causa.cuit || '').split('/').map(s => s.trim()).filter(s => s);
+    const cuitDisplay = cuits.length > 1 ? `${cuits[0]} <span style="color:#888;font-size:11px;">+${cuits.length - 1}</span>` : (causa.cuit || '-');
+    const titulares = (causa.titular || '').split('/').map(s => s.trim()).filter(s => s);
+    const titularDisplay = titulares.length > 1 ? `${titulares[0]} <span style="color:#888;font-size:11px;">+${titulares.length - 1}</span>` : (causa.titular || '-');
 
     tr.innerHTML = `
       <td style="padding:11px 16px;font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${causa.jud_id || '—'}</td>
       <td style="padding:11px 16px;font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${causa.expediente || '—'}</td>
-      <td style="padding:11px 16px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${causa.titular || '—'}</td>
-      <td style="padding:11px 16px;font-size:12px;color:#666;white-space:nowrap;">${causa.cuit || '—'}</td>
+      <td style="padding:11px 16px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${titularDisplay}</td>
+      <td style="padding:11px 16px;font-size:12px;color:#666;white-space:nowrap;">${cuitDisplay}</td>
       <td style="padding:11px 16px;cursor:copy;overflow:hidden;max-width:110px;">${renderChips(tels, 1)}</td>
       <td style="padding:11px 16px;cursor:copy;overflow:hidden;max-width:175px;">${renderChips(mails, 1)}</td>
       <td style="padding:11px 16px;">${createEstadoBadge(causa.estado)}${causa.no_intimar ? ' <span title="No intimar" style="color:#cc0000;font-size:13px;">🚫</span>' : ''}</td>
