@@ -265,7 +265,7 @@ function llenarResumen(causa) {
     ${(causa.estado === 'P' || causa.estado === 'C') && causa.fecha_pago ? `
     <div class="resumen-item">
       <span class="resumen-label">Último Pago</span>
-      <span class="resumen-value" style="color:#2E7D52;">${new Date(causa.fecha_pago).toLocaleDateString('es-AR')}</span>
+      <span class="resumen-value" style="color:#2E7D52;">${causa.fecha_pago.split('-').reverse().join('/')}</span>
     </div>
     <div class="resumen-item">
       <span class="resumen-label">Monto Pagado</span>
@@ -316,7 +316,7 @@ function llenarDatosCompletos(causa) {
     { label: 'Fecha Carga', valor: causa.fecha_carga ? new Date(causa.fecha_carga).toLocaleString() : '-' },
     { label: 'Última Actualización', valor: causa.fecha_actualizacion ? new Date(causa.fecha_actualizacion).toLocaleString() : '-' },
     { label: 'No Intimar', valor: causa.no_intimar ? '🚫 Sí — excluida de CIDI' : null },
-    { label: 'Fecha de Pago', valor: causa.fecha_pago ? new Date(causa.fecha_pago).toLocaleDateString('es-AR') : null },
+    { label: 'Fecha de Pago', valor: causa.fecha_pago ? causa.fecha_pago.split('-').reverse().join('/') : null },
     { label: 'Monto Pagado', valor: causa.monto_pagado ? formatCurrency(causa.monto_pagado) : null }
   ];
   

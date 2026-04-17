@@ -152,7 +152,7 @@ async function procesarArchivoPagos(input) {
     for (const fila of filas) {
       const judId = String(fila['Id Juicio'] || '').trim();
       if (!judId) continue;
-      const fecha = fila['Fecha'] ? new Date(fila['Fecha']).toISOString().split('T')[0] : null;
+      const fecha = fila['Fecha'] ? String(fila['Fecha']).split('T')[0].substring(0, 10) : null;
       const monto = (parseFloat(fila['H Extrajudicial']||0) + parseFloat(fila['H Demanda']||0) + parseFloat(fila['H Sentencia']||0) + parseFloat(fila['Gasto jud']||0));
       if (pagosMap[judId]) { pagosMap[judId].monto += monto; if (fecha > pagosMap[judId].fecha) pagosMap[judId].fecha = fecha; }
       else { pagosMap[judId] = { judId, fecha, monto, expediente: fila['Nro Jucio']||'' }; }
