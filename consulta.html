@@ -633,6 +633,15 @@
       padding: 6px 10px;
       font-size: 12px;
     }
+    .juzgado-card { background: var(--color-background-primary, white); border: 0.5px solid #ddd; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; }
+    .juzgado-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .juzgado-titulo { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+    .edit-btn { font-size: 11px; padding: 3px 10px; border-radius: 6px; border: 0.5px solid #ccc; background: white; color: #666; cursor: pointer; }
+    .juzgado-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .juzgado-field label { font-size: 10px; color: #888; text-transform: uppercase; display: block; margin-bottom: 2px; }
+    .juzgado-field span { font-size: 12px; color: #333; font-weight: 500; }
+    .juzgado-field.full { grid-column: 1 / -1; }
+    .juzgado-field input { width: 100%; padding: 6px 8px; border: 0.5px solid #ccc; border-radius: 6px; font-size: 12px; }
   </style>
 </head>
 <body class="page-internal">
@@ -792,6 +801,51 @@
         
         <!-- Pestaña mov/expte (NUEVA - por defecto activa) -->
         <div id="contenido-expte" class="contenido-tab">
+          <div class="juzgado-card" id="juzgadoCard">
+  <div class="juzgado-header">
+    <span class="juzgado-titulo">Datos del juzgado</span>
+    <button class="edit-btn" onclick="toggleEditJuzgado()">Editar</button>
+  </div>
+  <div id="juzgadoVista" class="juzgado-grid">
+    <div class="juzgado-field full">
+      <label>Secretaría / Tribunal</label>
+      <span id="vistaSecretaria">—</span>
+    </div>
+    <div class="juzgado-field">
+      <label>Expte. judicial</label>
+      <span id="vistaExpteJudicial">—</span>
+    </div>
+    <div class="juzgado-field">
+      <label>Fecha de inicio</label>
+      <span id="vistaFechaInicio">—</span>
+    </div>
+  </div>
+  <div id="juzgadoForm" style="display:none;">
+    <div class="juzgado-grid">
+      <div class="juzgado-field full">
+        <label>Secretaría / Tribunal</label>
+        <input type="text" id="inputSecretaria" placeholder="Ej: Secretaría de Ejecución Fiscal Nro 1">
+      </div>
+      <div class="juzgado-field">
+        <label>Expte. judicial</label>
+        <input type="text" id="inputExpteJudicial" placeholder="Ej: 14182002">
+      </div>
+      <div class="juzgado-field">
+        <label>Fecha de inicio</label>
+        <input type="date" id="inputFechaInicio">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn-guardar-expte" onclick="guardarDatosJuzgado()">Guardar</button>
+      <button class="btn-cancelar-expte" onclick="toggleEditJuzgado()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+          <div id="alertaInactividad" style="display:none; background:#fef3c7; border-left:3px solid #f59e0b; border-radius:0 6px 6px 0; padding:8px 12px; margin-bottom:10px; font-size:12px; color:#92400e;">
+  ⚠ Sin movimientos hace más de 6 meses — verificar estado
+</div>
+
           <div class="btn-nuevo-container">
             <button class="btn-nuevo" onclick="mostrarFormExpte()">
               <span>+</span> nuevo movimiento

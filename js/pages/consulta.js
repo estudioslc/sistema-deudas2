@@ -212,6 +212,8 @@ function verDetalle(id) {
   if (btnExt) btnExt.classList.add('activo');
   cargarMovimientos();
   
+  actualizarVistaJuzgado();
+
   const modal = document.getElementById('modalDetalle');
   if (modal) {
     modal.style.display = 'block';
@@ -523,16 +525,18 @@ async function cargarMovimientosExpte() {
     
     if (!data || data.length === 0) {
       timeline.innerHTML = '<div class="sin-movimientos">No hay movimientos registrados</div>';
+      verificarAlertaInactividad([]);
       return;
     }
-    
+
     let html = '';
     data.forEach(mov => {
       html += crearHtmlMovExpte(mov);
     });
-    
+
     timeline.innerHTML = html;
-    
+    verificarAlertaInactividad(data);
+
   } catch (err) {
     console.error('Error al cargar movimientos:', err);
     timeline.innerHTML = '<div class="error">Error al cargar movimientos</div>';
@@ -620,7 +624,7 @@ function crearHtmlMovExpte(mov) {
   };
   
   const tipoNombre = nombresTipos[mov.tipo_movimiento] || mov.tipo_movimiento;
-  const fechaFormateada = new Date(mov.fecha).toLocaleDateString('es-AR');
+  const fechaFormateada = mov.fecha ? mov.fecha.split('-').reverse().join('/') : '-';
   
   const archivos = obtenerArchivosArray(mov);
   
@@ -1365,6 +1369,70 @@ async function eliminarMovExpte(id) {
 }
 
 // ==========================================
+// DATOS DEL JUZGADO
+// ==========================================
+
+function toggleEditJuzgado() {
+  const vista = document.getElementById('juzgadoVista');
+  const form = document.getElementById('juzgadoForm');
+  if (!vista || !form) return;
+  const editando = form.style.display !== 'none';
+  vista.style.display = editando ? 'grid' : 'none';
+  form.style.display = editando ? 'none' : 'block';
+  if (!editando && causaActualDetalle) {
+    document.getElementById('inputSecretaria').value = causaActualDetalle.secretaria || '';
+    document.getElementById('inputExpteJudicial').value = causaActualDetalle.expte_judicial || '';
+    document.getElementById('inputFechaInicio').value = causaActualDetalle.fecha_inicio_expte || '';
+  }
+}
+
+async function guardarDatosJuzgado() {
+  if (!causaActualDetalle) return;
+  const secretaria = document.getElementById('inputSecretaria').value.trim();
+  const expteJudicial = document.getElementById('inputExpteJudicial').value.trim();
+  const fechaInicio = document.getElementById('inputFechaInicio').value;
+  try {
+    const { error } = await supabaseClient
+      .from('deudas')
+      .update({ secretaria, expte_judicial: expteJudicial, fecha_inicio_expte: fechaInicio || null, fecha_actualizacion: new Date().toISOString() })
+      .eq('id', causaActualDetalle.id);
+    if (error) throw error;
+    causaActualDetalle.secretaria = secretaria;
+    causaActualDetalle.expte_judicial = expteJudicial;
+    causaActualDetalle.fecha_inicio_expte = fechaInicio;
+    actualizarVistaJuzgado();
+    toggleEditJuzgado();
+    showSuccess('Datos del juzgado guardados');
+  } catch (err) {
+    console.error(err);
+    showError('Error al guardar datos del juzgado');
+  }
+}
+
+function actualizarVistaJuzgado() {
+  if (!causaActualDetalle) return;
+  const sec = document.getElementById('vistaSecretaria');
+  const expte = document.getElementById('vistaExpteJudicial');
+  const fecha = document.getElementById('vistaFechaInicio');
+  if (sec) sec.textContent = causaActualDetalle.secretaria || '—';
+  if (expte) expte.textContent = causaActualDetalle.expte_judicial || '—';
+  if (fecha) fecha.textContent = causaActualDetalle.fecha_inicio_expte ? causaActualDetalle.fecha_inicio_expte.split('-').reverse().join('/') : '—';
+}
+
+function verificarAlertaInactividad(movimientos) {
+  const alerta = document.getElementById('alertaInactividad');
+  if (!alerta) return;
+  if (!movimientos || movimientos.length === 0) {
+    alerta.style.display = 'block';
+    return;
+  }
+  const ultimo = new Date(movimientos[0].fecha);
+  const hoy = new Date();
+  const meses = (hoy - ultimo) / (1000 * 60 * 60 * 24 * 30);
+  alerta.style.display = meses > 6 ? 'block' : 'none';
+}
+
+// ==========================================
 // EXPONER FUNCIONES AL SCOPE GLOBAL
 // ==========================================
 
@@ -1396,3 +1464,5 @@ window.cancelarEdicionMovExpte = cancelarEdicionMovExpte;
 window.guardarEdicionMovExpte = guardarEdicionMovExpte;
 window.eliminarMovExpte = eliminarMovExpte;
 window.eliminarArchivoAdjunto = eliminarArchivoAdjunto;
+window.toggleEditJuzgado = toggleEditJuzgado;
+window.guardarDatosJuzgado = guardarDatosJuzgado;
